@@ -43,7 +43,7 @@ func testCURLAsync() {
 Ensure that you have installed libcurl.
 
 ```
-sudo apt-get install libcurl
+sudo apt-get install libcurl-dev
 ```
 
 ## Building
