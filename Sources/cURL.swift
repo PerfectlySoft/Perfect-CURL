@@ -299,7 +299,9 @@ public class CURL {
 		return curl_easy_setopt_long(self.curl!, option, int)
 	}
 
-	/// Sets the poionter option value.
+	/// Sets the pointer option value.
+    /// Note that the pointer value is not copied or otherwise manipulated or saved.
+    /// It is up to the caller to ensure the pointer value has a lifetime which corresponds to its usage.
 	public func setOption(_ option: CURLoption, v: UnsafeMutablePointer<Void>) -> CURLcode {
 		return curl_easy_setopt_void(self.curl!, option, v)
 	}
