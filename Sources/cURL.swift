@@ -165,7 +165,7 @@ public class CURL {
 		var header = [UInt8]()
 		var body = [UInt8]()
 	}
-	
+
 	/// Perform the CURL request in a non-blocking manner. The closure will be called with the resulting code, header and body data.
 	public func perform(closure: (Int, [UInt8], [UInt8]) -> ()) {
 
@@ -360,3 +360,4 @@ public class CURL {
 		self.close()
 	}
 }
+
