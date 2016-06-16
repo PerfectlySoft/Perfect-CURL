@@ -161,14 +161,13 @@ public class CURL {
 		}
 	}
 
-    private class ResponseAccumulator {
-        var header = [UInt8]()
-        var body = [UInt8]()
-    }
-    
+	private class ResponseAccumulator {
+		var header = [UInt8]()
+		var body = [UInt8]()
+	}
+
 	/// Perform the CURL request in a non-blocking manner. The closure will be called with the resulting code, header and body data.
 	public func perform(closure: (Int, [UInt8], [UInt8]) -> ()) {
-
 		let accum = ResponseAccumulator()
 
 		self.multi = curl_multi_init()
@@ -177,7 +176,7 @@ public class CURL {
 		performInner(accumulator: accum, closure: closure)
 	}
 
-    private func performInner(accumulator: ResponseAccumulator, closure: (Int, [UInt8], [UInt8]) -> ()) {
+	private func performInner(accumulator: ResponseAccumulator, closure: (Int, [UInt8], [UInt8]) -> ()) {
 		let perf = self.perform()
 		if let h = perf.2 {
 			let _ = accumulator.header.append(contentsOf: h)
@@ -197,7 +196,6 @@ public class CURL {
 	/// Performs the request, blocking the current thread until it completes.
 	/// - returns: A tuple consisting of: Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
 	public func performFully() -> (Int, [UInt8], [UInt8]) {
-
 		let code = curl_easy_perform(self.curl!)
 		defer {
 			if self.headerBytes.count > 0 {
@@ -283,7 +281,7 @@ public class CURL {
 
 	/// Returns the String value for the given CURLINFO.
 	public func getInfo(_ info: CURLINFO) -> (String, CURLcode) {
-        let i = UnsafeMutablePointer<UnsafePointer<Int8>?>(allocatingCapacity: 1)
+		let i = UnsafeMutablePointer<UnsafePointer<Int8>?>(allocatingCapacity: 1)
 		defer { i.deinitialize(count: 1); i.deallocateCapacity(1) }
 		let code = curl_easy_getinfo_cstr(self.curl!, info, i)
 		return (code != CURLE_OK ? "" : String(validatingUTF8: i.pointee!)!, code)
@@ -300,8 +298,8 @@ public class CURL {
 	}
 
 	/// Sets the pointer option value.
-    /// Note that the pointer value is not copied or otherwise manipulated or saved.
-    /// It is up to the caller to ensure the pointer value has a lifetime which corresponds to its usage.
+	/// Note that the pointer value is not copied or otherwise manipulated or saved.
+	/// It is up to the caller to ensure the pointer value has a lifetime which corresponds to its usage.
 	public func setOption(_ option: CURLoption, v: UnsafeMutablePointer<Void>) -> CURLcode {
 		return curl_easy_setopt_void(self.curl!, option, v)
 	}
@@ -360,3 +358,4 @@ public class CURL {
 		self.close()
 	}
 }
+
