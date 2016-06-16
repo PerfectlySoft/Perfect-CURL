@@ -1,9 +1,9 @@
 //
-//	PerfectCURLTests.swift
-//	PerfectCURL
+//  PerfectCURLTests.swift
+//  PerfectCURL
 //
-// Created by Kyle Jessup on 2016-06-06.
-// Copyright (C) 2016 PerfectlySoft, Inc.
+//  Created by Kyle Jessup on 2016-06-06.
+//	Copyright (C) 2016 PerfectlySoft, Inc.
 //
 //===----------------------------------------------------------------------===//
 //

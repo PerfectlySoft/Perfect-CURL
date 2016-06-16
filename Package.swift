@@ -1,8 +1,8 @@
 //
-//	Package.swift
-//	PerfectCURL
+//  Package.swift
+//  PerfectCURL
 //
-//	Created by Kyle Jessup on 2016-06-06.
+//  Created by Kyle Jessup on 2016-06-06.
 //	Copyright (C) 2016 PerfectlySoft, Inc.
 //
 //===----------------------------------------------------------------------===//

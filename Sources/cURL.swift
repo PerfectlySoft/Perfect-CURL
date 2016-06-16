@@ -1,9 +1,9 @@
 //
-// 	cURL.swift
-// 	PerfectLib
+//  cURL.swift
+//  PerfectLib
 //
-// Created by Kyle Jessup on 2015-08-10.
-// Copyright (C) 2015 PerfectlySoft, Inc.
+//  Created by Kyle Jessup on 2015-08-10.
+//	Copyright (C) 2015 PerfectlySoft, Inc.
 //
 //===----------------------------------------------------------------------===//
 //
