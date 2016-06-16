@@ -168,7 +168,6 @@ public class CURL {
 
 	/// Perform the CURL request in a non-blocking manner. The closure will be called with the resulting code, header and body data.
 	public func perform(closure: (Int, [UInt8], [UInt8]) -> ()) {
-
 		let accum = ResponseAccumulator()
 
 		self.multi = curl_multi_init()
@@ -197,7 +196,6 @@ public class CURL {
 	/// Performs the request, blocking the current thread until it completes.
 	/// - returns: A tuple consisting of: Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
 	public func performFully() -> (Int, [UInt8], [UInt8]) {
-
 		let code = curl_easy_perform(self.curl!)
 		defer {
 			if self.headerBytes.count > 0 {

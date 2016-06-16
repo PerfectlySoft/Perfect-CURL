@@ -24,7 +24,6 @@ import cURL
 class PerfectCURLTests: XCTestCase {
 
 	func testCURL() {
-
 		let url = "https://www.treefrog.ca"
 		let curl = CURL(url: url)
 
@@ -62,7 +61,6 @@ class PerfectCURLTests: XCTestCase {
 	}
 
 	func testCURLAsync() {
-
 		let url = "https://www.treefrog.ca"
 		let curl = CURL(url: url)
 
