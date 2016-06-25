@@ -75,15 +75,22 @@ public class CURL {
 
 	func setCurlOpts() {
 		curl_easy_setopt_long(self.curl!, CURLOPT_NOSIGNAL, 1)
+    #if FLIP
 		let opaqueMe = UnsafeMutablePointer<()>(OpaquePointer(bitPattern: Unmanaged.passUnretained(self)))
+    #else
+        let opaqueMe = UnsafeMutablePointer<()>(Unmanaged.passUnretained(self).toOpaque())
+    #endif
 		let _ = setOption(CURLOPT_HEADERDATA, v: opaqueMe)
 		let _ = setOption(CURLOPT_WRITEDATA, v: opaqueMe)
 		let _ = setOption(CURLOPT_READDATA, v: opaqueMe)
 
 		let headerReadFunc: curl_func = {
 			(a, size, num, p) -> Int in
-		#if swift(>=3.0)
+        #if FLIP
 			let crl = Unmanaged<CURL>.fromOpaque(OpaquePointer(p!)).takeUnretainedValue()
+        #else
+            let crl = Unmanaged<CURL>.fromOpaque(p!).takeUnretainedValue()
+        #endif
 			if let bytes = UnsafeMutablePointer<UInt8>(a) {
 				let fullCount = size*num
 				for idx in 0..<fullCount {
@@ -91,26 +98,17 @@ public class CURL {
 				}
 				return fullCount
 			}
-		#else
-			let crl = Unmanaged<CURL>.fromOpaque(OpaquePointer(p)).takeUnretainedValue()
-			let bytes = UnsafeMutablePointer<UInt8>(a)
-			if nil != bytes {
-				let fullCount = size*num
-				for idx in 0..<fullCount {
-					crl.headerBytes.append(bytes[idx])
-				}
-				return fullCount
-			}
-		#endif
 			return 0
 		}
 		let _ = setOption(CURLOPT_HEADERFUNCTION, f: headerReadFunc)
 
 		let writeFunc: curl_func = {
 			(a, size, num, p) -> Int in
-
-		#if swift(>=3.0)
+        #if FLIP
 			let crl = Unmanaged<CURL>.fromOpaque(OpaquePointer(p!)).takeUnretainedValue()
+        #else
+            let crl = Unmanaged<CURL>.fromOpaque(p!).takeUnretainedValue()
+        #endif
 			if let bytes = UnsafeMutablePointer<UInt8>(a) {
 				let fullCount = size*num
 				for idx in 0..<fullCount {
@@ -118,17 +116,6 @@ public class CURL {
 				}
 				return fullCount
 			}
-		#else
-			let crl = Unmanaged<CURL>.fromOpaque(OpaquePointer(p)).takeUnretainedValue()
-			let bytes = UnsafeMutablePointer<UInt8>(a)
-			if nil != bytes {
-				let fullCount = size*num
-				for idx in 0..<fullCount {
-					crl.bodyBytes.append(bytes[idx])
-				}
-				return fullCount
-			}
-		#endif
 			return 0
 		}
 		let _ = setOption(CURLOPT_WRITEFUNCTION, f: writeFunc)
