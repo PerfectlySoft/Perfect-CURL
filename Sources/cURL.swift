@@ -31,7 +31,7 @@ public class CURL {
 	var curl: UnsafeMutablePointer<Void>?
 	var multi: UnsafeMutablePointer<Void>?
 
-	var slists = [UnsafeMutablePointer<curl_slist>]()
+	var slists = UnsafeMutablePointer<curl_slist>()
 
 	var headerBytes = [UInt8]()
 	var bodyBytes = [UInt8]()
@@ -139,10 +139,7 @@ public class CURL {
 				curl_multi_remove_handle(self.multi!, self.curl!)
 				self.multi = nil
 			}
-			while self.slists.count > 0 {
-				curl_slist_free_all(self.slists.last!)
-				self.slists.removeLast()
-			}
+			self.slists = UnsafeMutablePointer<curl_slist>()
 			curl_easy_reset(self.curl!)
 			setCurlOpts()
 		}
@@ -307,17 +304,16 @@ public class CURL {
 			CURLOPT_MAIL_FROM.rawValue,
 			CURLOPT_MAIL_RCPT.rawValue:
 		#if swift(>=3.0)
-			guard let slist = curl_slist_append(nil, s) else {
+			guard self.slists = curl_slist_append(self.slists, s) else {
 				return CURLE_OUT_OF_MEMORY
 			}
 		#else
-			let slist = curl_slist_append(nil, s)
-			guard nil != slist else {
+			self.slists = curl_slist_append(self.slists, s)
+			guard nil != self.slists else {
 				return CURLE_OUT_OF_MEMORY
 			}
 		#endif
-			self.slists.append(slist)
-			return curl_easy_setopt_slist(self.curl!, option, slist)
+			return curl_easy_setopt_slist(self.curl!, option, self.slists)
 		default:
 			()
 		}
@@ -334,10 +330,7 @@ public class CURL {
 			curl_easy_cleanup(self.curl!)
 
 			self.curl = nil
-			while self.slists.count > 0 {
-				curl_slist_free_all(self.slists.last!)
-				self.slists.removeLast()
-			}
+			self.slists = UnsafeMutablePointer<curl_slist>()
 		}
 	}
 
