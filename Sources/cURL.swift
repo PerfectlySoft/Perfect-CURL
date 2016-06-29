@@ -31,7 +31,7 @@ public class CURL {
 	var curl: UnsafeMutablePointer<Void>?
 	var multi: UnsafeMutablePointer<Void>?
 
-	var slists = UnsafeMutablePointer<curl_slist>()
+	var slists = UnsafeMutablePointer<curl_slist>(nil)
 
 	var headerBytes = [UInt8]()
 	var bodyBytes = [UInt8]()
@@ -74,7 +74,10 @@ public class CURL {
 	}
 
 	func setCurlOpts() {
-		curl_easy_setopt_long(self.curl!, CURLOPT_NOSIGNAL, 1)
+        guard let curl = self.curl else {
+            return
+        }
+		curl_easy_setopt_long(curl, CURLOPT_NOSIGNAL, 1)
     #if FLIP
 		let opaqueMe = UnsafeMutablePointer<()>(OpaquePointer(bitPattern: Unmanaged.passUnretained(self)))
     #else
@@ -128,21 +131,22 @@ public class CURL {
 //			let crl = Unmanaged<CURL>.fromOpaque(COpaquePointer(p)).takeUnretainedValue()
 			return 0
 		}
-		let _ = setOption(CURLOPT_READFUNCTION, f: readFunc)
+		_ = setOption(CURLOPT_READFUNCTION, f: readFunc)
 
 	}
 
 	/// Clean up and reset the CURL object.
 	public func reset() {
-		if self.curl != nil {
-			if self.multi != nil {
-				curl_multi_remove_handle(self.multi!, self.curl!)
-				self.multi = nil
-			}
-			self.slists = UnsafeMutablePointer<curl_slist>()
-			curl_easy_reset(self.curl!)
-			setCurlOpts()
-		}
+		guard let curl = self.curl else {
+            return
+        }
+        if let multi = self.multi {
+            curl_multi_remove_handle(multi, curl)
+            self.multi = nil
+        }
+        self.slists = UnsafeMutablePointer<curl_slist>(nil)
+        curl_easy_reset(curl)
+        setCurlOpts()
 	}
 
 	private class ResponseAccumulator {
@@ -152,10 +156,13 @@ public class CURL {
 
 	/// Perform the CURL request in a non-blocking manner. The closure will be called with the resulting code, header and body data.
 	public func perform(closure: (Int, [UInt8], [UInt8]) -> ()) {
+        guard let curl = self.curl, multi = self.multi else {
+            return closure(-1, [UInt8](), [UInt8]())
+        }
 		let accum = ResponseAccumulator()
 
 		self.multi = curl_multi_init()
-		curl_multi_add_handle(self.multi!, self.curl!)
+		curl_multi_add_handle(multi, curl)
 
 		performInner(accumulator: accum, closure: closure)
 	}
@@ -163,10 +170,10 @@ public class CURL {
 	private func performInner(accumulator: ResponseAccumulator, closure: (Int, [UInt8], [UInt8]) -> ()) {
 		let perf = self.perform()
 		if let h = perf.2 {
-			let _ = accumulator.header.append(contentsOf: h)
+			_ = accumulator.header.append(contentsOf: h)
 		}
 		if let b = perf.3 {
-			let _ = accumulator.body.append(contentsOf: b)
+			_ = accumulator.body.append(contentsOf: b)
 		}
 		if perf.0 == false { // done
 			closure(perf.1, accumulator.header, accumulator.body)
@@ -179,8 +186,11 @@ public class CURL {
 
 	/// Performs the request, blocking the current thread until it completes.
 	/// - returns: A tuple consisting of: Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
-	public func performFully() -> (Int, [UInt8], [UInt8]) {
-		let code = curl_easy_perform(self.curl!)
+    public func performFully() -> (Int, [UInt8], [UInt8]) {
+        guard let curl = self.curl else {
+            return (-1, [UInt8](), [UInt8]())
+        }
+		let code = curl_easy_perform(curl)
 		defer {
 			if self.headerBytes.count > 0 {
 				self.headerBytes = [UInt8]()
@@ -199,16 +209,23 @@ public class CURL {
 
 	/// Performs a bit of work on the current request.
 	/// - returns: A tuple consisting of: Bool - should perform() be called again, Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
-	public func perform() -> (Bool, Int, [UInt8]?, [UInt8]?) {
+    public func perform() -> (Bool, Int, [UInt8]?, [UInt8]?) {
+        guard let curl = self.curl else {
+            return (false, -1, nil, nil)
+        }
 		if self.multi == nil {
-			self.multi = curl_multi_init()
-			curl_multi_add_handle(self.multi!, self.curl!)
+			let multi = curl_multi_init()
+            self.multi = multi
+			curl_multi_add_handle(multi, curl)
 		}
+        guard let multi = self.multi else {
+            return (false, -1, nil, nil)
+        }
 		var one: Int32 = 0
 		var code = CURLM_OK
 		repeat {
 
-			code = curl_multi_perform(self.multi!, &one)
+			code = curl_multi_perform(multi, &one)
 
 		} while code == CURLM_CALL_MULTI_PERFORM
 
@@ -216,7 +233,7 @@ public class CURL {
 			return (false, Int(code.rawValue), nil, nil)
 		}
 		var two: Int32 = 0
-		let msg = curl_multi_info_read(self.multi!, &two)
+		let msg = curl_multi_info_read(multi, &two)
 
 		defer {
 			if self.headerBytes.count > 0 {
@@ -257,44 +274,65 @@ public class CURL {
 	}
 
 	/// Returns the Int value for the given CURLINFO.
-	public func getInfo(_ info: CURLINFO) -> (Int, CURLcode) {
+    public func getInfo(_ info: CURLINFO) -> (Int, CURLcode) {
+        guard let curl = self.curl else {
+            return (-1, CURLE_FAILED_INIT)
+        }
 		var i = 0
-		let c = curl_easy_getinfo_long(self.curl!, info, &i)
+		let c = curl_easy_getinfo_long(curl, info, &i)
 		return (i, c)
 	}
 
 	/// Returns the String value for the given CURLINFO.
-	public func getInfo(_ info: CURLINFO) -> (String, CURLcode) {
+    public func getInfo(_ info: CURLINFO) -> (String, CURLcode) {
+        guard let curl = self.curl else {
+            return ("Not initialized", CURLE_FAILED_INIT)
+        }
 		let i = UnsafeMutablePointer<UnsafePointer<Int8>?>(allocatingCapacity: 1)
 		defer { i.deinitialize(count: 1); i.deallocateCapacity(1) }
-		let code = curl_easy_getinfo_cstr(self.curl!, info, i)
+		let code = curl_easy_getinfo_cstr(curl, info, i)
 		return (code != CURLE_OK ? "" : String(validatingUTF8: i.pointee!)!, code)
 	}
 
 	/// Sets the Int64 option value.
-	public func setOption(_ option: CURLoption, int: Int64) -> CURLcode {
-		return curl_easy_setopt_int64(self.curl!, option, int)
+    public func setOption(_ option: CURLoption, int: Int64) -> CURLcode {
+        guard let curl = self.curl else {
+            return CURLE_FAILED_INIT
+        }
+		return curl_easy_setopt_int64(curl, option, int)
 	}
 
 	/// Sets the Int option value.
-	public func setOption(_ option: CURLoption, int: Int) -> CURLcode {
-		return curl_easy_setopt_long(self.curl!, option, int)
+    public func setOption(_ option: CURLoption, int: Int) -> CURLcode {
+        guard let curl = self.curl else {
+            return CURLE_FAILED_INIT
+        }
+		return curl_easy_setopt_long(curl, option, int)
 	}
 
 	/// Sets the pointer option value.
 	/// Note that the pointer value is not copied or otherwise manipulated or saved.
 	/// It is up to the caller to ensure the pointer value has a lifetime which corresponds to its usage.
-	public func setOption(_ option: CURLoption, v: UnsafeMutablePointer<Void>) -> CURLcode {
-		return curl_easy_setopt_void(self.curl!, option, v)
+    public func setOption(_ option: CURLoption, v: UnsafeMutablePointer<Void>) -> CURLcode {
+        guard let curl = self.curl else {
+            return CURLE_FAILED_INIT
+        }
+		return curl_easy_setopt_void(curl, option, v)
 	}
 
 	/// Sets the callback function option value.
-	public func setOption(_ option: CURLoption, f: curl_func) -> CURLcode {
-		return curl_easy_setopt_func(self.curl!, option, f)
+    public func setOption(_ option: CURLoption, f: curl_func) -> CURLcode {
+        guard let curl = self.curl else {
+            return CURLE_FAILED_INIT
+        }
+		return curl_easy_setopt_func(curl, option, f)
 	}
 
 	/// Sets the String option value.
-	public func setOption(_ option: CURLoption, s: String) -> CURLcode {
+    public func setOption(_ option: CURLoption, s: String) -> CURLcode {
+        guard let curl = self.curl else {
+            return CURLE_FAILED_INIT
+        }
 		switch(option.rawValue) {
 		case CURLOPT_HTTP200ALIASES.rawValue,
 			CURLOPT_HTTPHEADER.rawValue,
@@ -303,17 +341,12 @@ public class CURL {
 			CURLOPT_QUOTE.rawValue,
 			CURLOPT_MAIL_FROM.rawValue,
 			CURLOPT_MAIL_RCPT.rawValue:
-		#if swift(>=3.0)
-			guard self.slists = curl_slist_append(self.slists, s) else {
+            let slists = curl_slist_append(self.slists, s)
+			guard slists != nil else {
 				return CURLE_OUT_OF_MEMORY
 			}
-		#else
-			self.slists = curl_slist_append(self.slists, s)
-			guard nil != self.slists else {
-				return CURLE_OUT_OF_MEMORY
-			}
-		#endif
-			return curl_easy_setopt_slist(self.curl!, option, self.slists)
+            self.slists = slists
+			return curl_easy_setopt_slist(curl, option, self.slists)
 		default:
 			()
 		}
@@ -321,17 +354,19 @@ public class CURL {
 	}
 
 	/// Cleanup and close the CURL request.
-	public func close() {
-		if self.curl != nil {
-			if self.multi != nil {
-				curl_multi_cleanup(self.multi!)
-				self.multi = nil
-			}
-			curl_easy_cleanup(self.curl!)
+    public func close() {
+        guard let curl = self.curl else {
+            return
+        }
+		
+        if let multi = self.multi {
+            curl_multi_cleanup(multi)
+            self.multi = nil
+        }
+        curl_easy_cleanup(curl)
 
-			self.curl = nil
-			self.slists = UnsafeMutablePointer<curl_slist>()
-		}
+        self.curl = nil
+        self.slists = UnsafeMutablePointer<curl_slist>(nil)
 	}
 
 	deinit {

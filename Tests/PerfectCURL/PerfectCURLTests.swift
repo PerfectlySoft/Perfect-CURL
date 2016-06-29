@@ -91,10 +91,13 @@ class PerfectCURLTests: XCTestCase {
 
 	func testCURLHeader() {
 		let url = "https://httpbin.org/headers"
-		let header = ("Accept", "application/json")
+		let header = [("Accept", "application/json"), ("X-Extra", "value123")]
 
 		let curl = CURL(url: url)
-		let _ = curl.setOption(CURLOPT_HTTPHEADER, s: "\(header.0): \(header.1)" )
+        for (n, v) in header {
+            let code = curl.setOption(CURLOPT_HTTPHEADER, s: "\(n): \(v)" )
+            XCTAssert(code == CURLE_OK)
+        }
 		let response = curl.performFully()
 		XCTAssert(response.0 == 0)
 
