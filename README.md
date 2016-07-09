@@ -51,7 +51,7 @@ sudo apt-get install libcurl-dev
 Add this project as a dependency in your Package.swift file.
 
 ```
-.Package(url: "https://github.com/PerfectlySoft/Perfect-CURL.git", majorVersion: 0, minor: 1)
+.Package(url: "https://github.com/PerfectlySoft/Perfect-CURL.git", versions: Version(0,0,0)..<Version(10,0,0))
 ```
 
 ## Repository Layout
