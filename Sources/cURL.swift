@@ -156,12 +156,13 @@ public class CURL {
 
 	/// Perform the CURL request in a non-blocking manner. The closure will be called with the resulting code, header and body data.
 	public func perform(closure: (Int, [UInt8], [UInt8]) -> ()) {
-        guard let curl = self.curl, multi = self.multi else {
+        guard let curl = self.curl else {
             return closure(-1, [UInt8](), [UInt8]())
         }
 		let accum = ResponseAccumulator()
-
-		self.multi = curl_multi_init()
+		if nil == self.multi {
+			self.multi = curl_multi_init()
+		}
 		curl_multi_add_handle(multi, curl)
 
 		performInner(accumulator: accum, closure: closure)
