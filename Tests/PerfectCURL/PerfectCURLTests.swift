@@ -68,7 +68,7 @@ class PerfectCURLTests: XCTestCase {
 
 		XCTAssert(curl.url == url)
 
-		let clientExpectation = self.expectation(withDescription: "client")
+		let clientExpectation = self.expectation(description: "client")
 
 		curl.perform {
 			code, header, body in
@@ -83,7 +83,7 @@ class PerfectCURLTests: XCTestCase {
 			clientExpectation.fulfill()
 		}
 
-		self.waitForExpectations(withTimeout: 10000) {
+		self.waitForExpectations(timeout: 10000) {
 			_ in
 
 		}

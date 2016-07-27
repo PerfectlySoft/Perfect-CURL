@@ -289,8 +289,8 @@ public class CURL {
         guard let curl = self.curl else {
             return ("Not initialized", CURLE_FAILED_INIT)
         }
-		let i = UnsafeMutablePointer<UnsafePointer<Int8>?>(allocatingCapacity: 1)
-		defer { i.deinitialize(count: 1); i.deallocateCapacity(1) }
+		let i = UnsafeMutablePointer<UnsafePointer<Int8>?>.allocate(capacity: 1)
+		defer { i.deinitialize(count: 1); i.deallocate(capacity: 1) }
 		let code = curl_easy_getinfo_cstr(curl, info, i)
 		return (code != CURLE_OK ? "" : String(validatingUTF8: i.pointee!)!, code)
 	}
