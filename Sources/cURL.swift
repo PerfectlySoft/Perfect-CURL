@@ -294,8 +294,9 @@ public class CURL {
 		let code = curl_easy_getinfo_cstr(curl, info, i)
 		return (code != CURLE_OK ? "" : String(validatingUTF8: i.pointee!)!, code)
 	}
-
+	
 	/// Sets the Int64 option value.
+	@discardableResult
     public func setOption(_ option: CURLoption, int: Int64) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
@@ -304,6 +305,7 @@ public class CURL {
 	}
 
 	/// Sets the Int option value.
+	@discardableResult
     public func setOption(_ option: CURLoption, int: Int) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
@@ -314,6 +316,7 @@ public class CURL {
 	/// Sets the pointer option value.
 	/// Note that the pointer value is not copied or otherwise manipulated or saved.
 	/// It is up to the caller to ensure the pointer value has a lifetime which corresponds to its usage.
+	@discardableResult
     public func setOption(_ option: CURLoption, v: UnsafeMutablePointer<Void>) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
@@ -322,6 +325,7 @@ public class CURL {
 	}
 
 	/// Sets the callback function option value.
+	@discardableResult
     public func setOption(_ option: CURLoption, f: curl_func) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
@@ -330,6 +334,7 @@ public class CURL {
 	}
 
 	/// Sets the String option value.
+	@discardableResult
     public func setOption(_ option: CURLoption, s: String) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
