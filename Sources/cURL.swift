@@ -28,10 +28,10 @@ public class CURL {
 		return 1
 	}()
 
-	var curl: UnsafeMutablePointer<Void>?
-	var multi: UnsafeMutablePointer<Void>?
+	var curl: UnsafeMutableRawPointer?
+	var multi: UnsafeMutableRawPointer?
 
-	var slists = UnsafeMutablePointer<curl_slist>(nil)
+	var slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
 
 	var headerBytes = [UInt8]()
 	var bodyBytes = [UInt8]()
@@ -78,23 +78,16 @@ public class CURL {
             return
         }
 		curl_easy_setopt_long(curl, CURLOPT_NOSIGNAL, 1)
-    #if FLIP
-		let opaqueMe = UnsafeMutablePointer<()>(OpaquePointer(bitPattern: Unmanaged.passUnretained(self)))
-    #else
-        let opaqueMe = UnsafeMutablePointer<()>(Unmanaged.passUnretained(self).toOpaque())
-    #endif
+        let opaqueMe = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
 		let _ = setOption(CURLOPT_HEADERDATA, v: opaqueMe)
 		let _ = setOption(CURLOPT_WRITEDATA, v: opaqueMe)
 		let _ = setOption(CURLOPT_READDATA, v: opaqueMe)
 
 		let headerReadFunc: curl_func = {
 			(a, size, num, p) -> Int in
-        #if FLIP
-			let crl = Unmanaged<CURL>.fromOpaque(OpaquePointer(p!)).takeUnretainedValue()
-        #else
+
             let crl = Unmanaged<CURL>.fromOpaque(p!).takeUnretainedValue()
-        #endif
-			if let bytes = UnsafeMutablePointer<UInt8>(a) {
+			if let bytes = a?.assumingMemoryBound(to: UInt8.self) {
 				let fullCount = size*num
 				for idx in 0..<fullCount {
 					crl.headerBytes.append(bytes[idx])
@@ -107,12 +100,9 @@ public class CURL {
 
 		let writeFunc: curl_func = {
 			(a, size, num, p) -> Int in
-        #if FLIP
-			let crl = Unmanaged<CURL>.fromOpaque(OpaquePointer(p!)).takeUnretainedValue()
-        #else
+
             let crl = Unmanaged<CURL>.fromOpaque(p!).takeUnretainedValue()
-        #endif
-			if let bytes = UnsafeMutablePointer<UInt8>(a) {
+			if let bytes = a?.assumingMemoryBound(to: UInt8.self) {
 				let fullCount = size*num
 				for idx in 0..<fullCount {
 					crl.bodyBytes.append(bytes[idx])
@@ -144,7 +134,7 @@ public class CURL {
             curl_multi_remove_handle(multi, curl)
             self.multi = nil
         }
-        self.slists = UnsafeMutablePointer<curl_slist>(nil)
+        self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
         curl_easy_reset(curl)
         setCurlOpts()
 	}
@@ -155,7 +145,7 @@ public class CURL {
 	}
 
 	/// Perform the CURL request in a non-blocking manner. The closure will be called with the resulting code, header and body data.
-	public func perform(closure: (Int, [UInt8], [UInt8]) -> ()) {
+	public func perform(closure: @escaping (Int, [UInt8], [UInt8]) -> ()) {
         guard let curl = self.curl else {
             return closure(-1, [UInt8](), [UInt8]())
         }
@@ -168,7 +158,7 @@ public class CURL {
 		performInner(accumulator: accum, closure: closure)
 	}
 
-	private func performInner(accumulator: ResponseAccumulator, closure: (Int, [UInt8], [UInt8]) -> ()) {
+	private func performInner(accumulator: ResponseAccumulator, closure: @escaping (Int, [UInt8], [UInt8]) -> ()) {
 		let perf = self.perform()
 		if let h = perf.2 {
 			_ = accumulator.header.append(contentsOf: h)
@@ -317,7 +307,7 @@ public class CURL {
 	/// Note that the pointer value is not copied or otherwise manipulated or saved.
 	/// It is up to the caller to ensure the pointer value has a lifetime which corresponds to its usage.
 	@discardableResult
-    public func setOption(_ option: CURLoption, v: UnsafeMutablePointer<Void>) -> CURLcode {
+    public func setOption(_ option: CURLoption, v: UnsafeMutableRawPointer) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
         }
@@ -372,7 +362,7 @@ public class CURL {
         curl_easy_cleanup(curl)
 
         self.curl = nil
-        self.slists = UnsafeMutablePointer<curl_slist>(nil)
+        self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
 	}
 
 	deinit {

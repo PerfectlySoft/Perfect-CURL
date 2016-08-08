@@ -127,7 +127,7 @@ class PerfectCURLTests: XCTestCase {
 			let curl = CURL(url: url)
 
 			let _ = curl.setOption(CURLOPT_POST, int: 1)
-			let _ = curl.setOption(CURLOPT_POSTFIELDS, v: UnsafeMutablePointer<UInt8>(byteArray))
+			let _ = curl.setOption(CURLOPT_POSTFIELDS, v: UnsafeMutableRawPointer(mutating: byteArray))
 			let _ = curl.setOption(CURLOPT_POSTFIELDSIZE, int: byteArray.count)
 
 			let response = curl.performFully()
