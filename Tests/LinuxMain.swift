@@ -1,5 +1,5 @@
 import XCTest
-@testable import PerfectCURLTestSuite
+@testable import PerfectCURLTests
 
 XCTMain([
 	testCase(PerfectCURLTests.allTests),
