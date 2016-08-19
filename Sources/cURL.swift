@@ -316,7 +316,7 @@ public class CURL {
 
 	/// Sets the callback function option value.
 	@discardableResult
-    public func setOption(_ option: CURLoption, f: curl_func) -> CURLcode {
+    public func setOption(_ option: CURLoption, f: @escaping curl_func) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
         }
