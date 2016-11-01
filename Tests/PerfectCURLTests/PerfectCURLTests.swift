@@ -152,11 +152,26 @@ class PerfectCURLTests: XCTestCase {
 		}
 	}
 
+    func testReset() {
+        let url = "https://hestiatv.domain.com/t/"
+        let curl = CURL()
+        for _ in 1...5 {
+            let _ = curl.setOption(CURLOPT_URL, s: url)
+            let _ = curl.setOption(CURLOPT_USERAGENT, s: "CURL")
+            let (_, _, body ) = curl.performFully()
+            let content = String(bytes:body, encoding:String.Encoding.utf8)
+            XCTAssertNotNil(content)
+            print(content!)
+            curl.reset()
+            sleep(1)
+        }
+    }
 	static var allTests : [(String, (PerfectCURLTests) -> () throws -> Void)] {
 		return [
 			("testCURLPost", testCURLPost),
 			("testCURLHeader", testCURLHeader),
 			("testCURLAsync", testCURLAsync),
+			("testReset", testReset),
 			("testCURL", testCURL)
 		]
 	}
