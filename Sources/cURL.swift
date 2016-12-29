@@ -113,15 +113,7 @@ public class CURL {
 		}
 		let _ = setOption(CURLOPT_WRITEFUNCTION, f: writeFunc)
 
-		let readFunc: curl_func = {
-			(a, b, c, p) -> Int in
-
-			// !FIX!
-
-//			let crl = Unmanaged<CURL>.fromOpaque(COpaquePointer(p)).takeUnretainedValue()
-			return 0
-		}
-		_ = setOption(CURLOPT_READFUNCTION, f: readFunc)
+		let _ = setOption(CURLOPT_READFUNCTION, f: { fread($0, $1, $2, unsafeBitCast($3, to: UnsafeMutablePointer<FILE>.self)) })
 
 	}
 
@@ -335,7 +327,7 @@ public class CURL {
 			CURLOPT_POSTQUOTE.rawValue,
 			CURLOPT_PREQUOTE.rawValue,
 			CURLOPT_QUOTE.rawValue,
-			CURLOPT_MAIL_FROM.rawValue,
+			//CURLOPT_MAIL_FROM.rawValue,
 			CURLOPT_MAIL_RCPT.rawValue:
             let slists = curl_slist_append(self.slists, s)
 			guard slists != nil else {

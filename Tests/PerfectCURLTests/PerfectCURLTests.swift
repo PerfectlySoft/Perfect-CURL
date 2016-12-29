@@ -152,11 +152,54 @@ class PerfectCURLTests: XCTestCase {
 		}
 	}
 
+  func testSMTP () {
+    var timestamp = time(nil)
+    let now = String(cString: asctime(localtime(&timestamp))!)
+    let sender = "judysmith1964@gmx.com"
+    let recipient = sender
+    let u = UnsafeMutablePointer<UInt8>.allocate(capacity:  MemoryLayout<uuid_t>.size)
+    uuid_generate_random(u)
+    let unu = UnsafeMutablePointer<Int8>.allocate(capacity:  37)
+    uuid_unparse_lower(u, unu)
+    let uuid = String(validatingUTF8: unu)!
+    u.deallocate(capacity: MemoryLayout<uuid_t>.size)
+    unu.deallocate(capacity: 37)
+
+    let content = "Date: \(now)To: \(recipient)\r\nFrom: \(sender)\r\nCc:\r\nBcc:\r\n" +
+    "Message-ID: <\(uuid)@perfect.org>\r\n" +
+    "Subject: Hello Perfect-CURL\r\n\r\nSMTP test \(now)\r\n\r\n"
+    print(content)
+    let curl = CURL(url: "smtp://smtp.gmx.com")
+    let _ = curl.setOption(CURLOPT_USERNAME, s: sender)
+    let _ = curl.setOption(CURLOPT_PASSWORD, s: "abcd1234")
+    //let _ = curl.setOption(CURLOPT_USE_SSL, int: Int(CURLUSESSL_ALL.rawValue))
+    let _ = curl.setOption(CURLOPT_MAIL_FROM, s: sender)
+    let _ = curl.setOption(CURLOPT_MAIL_RCPT, s: recipient)
+    let _ = curl.setOption(CURLOPT_VERBOSE, int: 1)
+    let _ = curl.setOption(CURLOPT_UPLOAD, int: 1)
+    let _ = curl.setOption(CURLOPT_INFILESIZE, int: content.utf8.count)
+    var p:[Int32] = [-1, -1]
+    let result = pipe(&p)
+    XCTAssertEqual(result, 0)
+    let fi = fdopen(p[0], "rb")
+    let fo = fdopen(p[1], "wb")
+    let w = fwrite(content, 1, content.utf8.count, fo)
+    fclose(fo)
+    XCTAssertEqual(w, content.utf8.count)
+    let _ = curl.setOption(CURLOPT_READDATA, v: fi!)
+    let r = curl.performFully()
+    print(r.0)
+    print(String(cString:r.1))
+    print(String(cString:r.2))
+    fclose(fi)
+    XCTAssertEqual(r.0, 0)
+  }
 	static var allTests : [(String, (PerfectCURLTests) -> () throws -> Void)] {
 		return [
 			("testCURLPost", testCURLPost),
 			("testCURLHeader", testCURLHeader),
 			("testCURLAsync", testCURLAsync),
+			("testSMTP", testSMTP),
 			("testCURL", testCURL)
 		]
 	}
