@@ -20,6 +20,9 @@
 import XCTest
 @testable import PerfectCURL
 import cURL
+#if os(Linux)
+	import LinuxBridge
+#endif
 
 class PerfectCURLTests: XCTestCase {
 
