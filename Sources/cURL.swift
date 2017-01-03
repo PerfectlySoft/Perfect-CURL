@@ -113,7 +113,12 @@ public class CURL {
 		}
 		let _ = setOption(CURLOPT_WRITEFUNCTION, f: writeFunc)
 
-		let _ = setOption(CURLOPT_READFUNCTION, f: { fread($0, $1, $2, unsafeBitCast($3, to: UnsafeMutablePointer<FILE>.self)) })
+		let _ = setOption(CURLOPT_READFUNCTION, f: { _,_,_,_ in 
+		// it is dangerous to set the curl default fread function without READDATA
+		// so the best option is to leave it blank
+		//	fread($0, $1, $2, unsafeBitCast($3, to: UnsafeMutablePointer<FILE>.self)) 
+			return 0
+		})
 
 	}
 
