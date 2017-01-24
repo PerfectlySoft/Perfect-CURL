@@ -173,10 +173,10 @@ public class CURL {
 	}
 
 	/// Performs the request, blocking the current thread until it completes.
-	/// - returns: A tuple consisting of: Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
-    public func performFully() -> (Int, [UInt8], [UInt8]) {
+	/// - returns: A tuple consisting of: Int - the result code, Int - the response code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
+    public func performFully() -> (resultCode: Int, responseCode: Int, headerBytes: [UInt8], bodyBytes: [UInt8]) {
         guard let curl = self.curl else {
-            return (-1, [UInt8](), [UInt8]())
+            return (-1, -1, [UInt8](), [UInt8]())
         }
 		let code = curl_easy_perform(curl)
 		defer {
@@ -192,7 +192,7 @@ public class CURL {
 			let str = self.strError(code: code)
 			print(str)
 		}
-		return (Int(code.rawValue), self.headerBytes, self.bodyBytes)
+		return (Int(code.rawValue), self.responseCode, self.headerBytes, self.bodyBytes)
 	}
 
 	/// Performs a bit of work on the current request.
