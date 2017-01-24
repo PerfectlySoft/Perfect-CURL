@@ -119,6 +119,16 @@ class PerfectCURLTests: XCTestCase {
 //			XCTAssert(false, "Exception: \(e)")
 //		}
 	}
+    
+    func testPerformFullyShouldReturnResponseCode() {
+        let url = "https://httpbin.org/get"
+        
+        let curl = CURL(url: url)
+
+        let response = curl.performFully()
+        XCTAssert(response.0 == 0)
+        XCTAssertEqual(response.responseCode, 200)
+    }
 
 	func testCURLPost() {
 		let url = "https://httpbin.org/post"
@@ -192,8 +202,8 @@ class PerfectCURLTests: XCTestCase {
     let _ = curl.setOption(CURLOPT_READDATA, v: fi!)
     let r = curl.performFully()
     print(r.0)
-    print(String(cString:r.1))
     print(String(cString:r.2))
+    print(String(cString:r.3))
     fclose(fi)
     XCTAssertEqual(r.0, 0)
   }
@@ -201,6 +211,7 @@ class PerfectCURLTests: XCTestCase {
 		return [
 			("testCURLPost", testCURLPost),
 			("testCURLHeader", testCURLHeader),
+			("testPerformFullyShouldReturnResponseCode", testPerformFullyShouldReturnResponseCode),
 			("testCURLAsync", testCURLAsync),
 			("testSMTP", testSMTP),
 			("testCURL", testCURL)
