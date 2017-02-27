@@ -20,7 +20,7 @@
 import PackageDescription
 
 let package = Package(
-	name: "PerfectCURL",
+	name: "DKPerfectCURL",
 	targets: [],
 	dependencies: [
 		.Package(url: "https://github.com/PerfectlySoft/Perfect-libcurl.git", majorVersion: 2),
