@@ -172,28 +172,30 @@ public class CURL {
 		}
 	}
 
-	/// Performs the request, blocking the current thread until it completes.
-	/// - returns: A tuple consisting of: Int - the result code, Int - the response code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
-    public func performFully() -> (resultCode: Int, responseCode: Int, headerBytes: [UInt8], bodyBytes: [UInt8]) {
+    
+    /// Performs the request, blocking the current thread until it completes.
+    /// - returns: A tuple consisting of: Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
+    @available(*, deprecated, message: "Use performFullySync() instead")
+    public func performFully() -> (Int, [UInt8], [UInt8]) {
         guard let curl = self.curl else {
-            return (-1, -1, [UInt8](), [UInt8]())
+            return (-1, [UInt8](), [UInt8]())
         }
-		let code = curl_easy_perform(curl)
-		defer {
-			if self.headerBytes.count > 0 {
-				self.headerBytes = [UInt8]()
-			}
-			if self.bodyBytes.count > 0 {
-				self.bodyBytes = [UInt8]()
-			}
-			self.reset()
-		}
-		if code != CURLE_OK {
-			let str = self.strError(code: code)
-			print(str)
-		}
-		return (Int(code.rawValue), self.responseCode, self.headerBytes, self.bodyBytes)
-	}
+        let code = curl_easy_perform(curl)
+        defer {
+            if self.headerBytes.count > 0 {
+                self.headerBytes = [UInt8]()
+            }
+            if self.bodyBytes.count > 0 {
+                self.bodyBytes = [UInt8]()
+            }
+            self.reset()
+        }
+        if code != CURLE_OK {
+            let str = self.strError(code: code)
+            print(str)
+        }
+        return (Int(code.rawValue), self.headerBytes, self.bodyBytes)
+    }
 
 	/// Performs a bit of work on the current request.
 	/// - returns: A tuple consisting of: Bool - should perform() be called again, Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
@@ -245,6 +247,29 @@ public class CURL {
 			self.headerBytes.count > 0 ? self.headerBytes : nil,
 			self.bodyBytes.count > 0 ? self.bodyBytes : nil)
 	}
+    
+    /// Performs the request, blocking the current thread until it completes.
+    /// - returns: A tuple consisting of: Int - the result code, Int - the response code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
+    public func performFullySync() -> (resultCode: Int, responseCode: Int, headerBytes: [UInt8], bodyBytes: [UInt8]) {
+        guard let curl = self.curl else {
+            return (-1, -1, [UInt8](), [UInt8]())
+        }
+        let code = curl_easy_perform(curl)
+        defer {
+            if self.headerBytes.count > 0 {
+                self.headerBytes = [UInt8]()
+            }
+            if self.bodyBytes.count > 0 {
+                self.bodyBytes = [UInt8]()
+            }
+            self.reset()
+        }
+        if code != CURLE_OK {
+            let str = self.strError(code: code)
+            print(str)
+        }
+        return (Int(code.rawValue), self.responseCode, self.headerBytes, self.bodyBytes)
+    }
 
 //	/// Returns the result code for the last
 //	public func multiResult() -> CURLcode {

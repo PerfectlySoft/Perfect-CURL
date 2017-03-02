@@ -101,7 +101,7 @@ class PerfectCURLTests: XCTestCase {
             let code = curl.setOption(CURLOPT_HTTPHEADER, s: "\(n): \(v)" )
             XCTAssert(code == CURLE_OK)
         }
-		let response = curl.performFully()
+		let response = curl.performFullySync()
 		XCTAssert(response.0 == 0)
 
 //		let body = UTF8Encoding.encode(bytes: response.2)
@@ -120,14 +120,14 @@ class PerfectCURLTests: XCTestCase {
 //		}
 	}
     
-    func testPerformFullyShouldReturnResponseCode() {
-        let url = "https://httpbin.org/get"
-        
-        let curl = CURL(url: url)
+    func testPerformFullySync() {
+        let curl = CURL(url: "https://httpbin.org/get")
 
-        let response = curl.performFully()
-        XCTAssert(response.0 == 0)
+        let response = curl.performFullySync()
+        XCTAssert(response.resultCode == 0)
         XCTAssertEqual(response.responseCode, 200)
+        XCTAssert(response.headerBytes.count > 0)
+        XCTAssert(response.bodyBytes.count > 0)
     }
 
 	func testCURLPost() {
@@ -143,7 +143,7 @@ class PerfectCURLTests: XCTestCase {
 			let _ = curl.setOption(CURLOPT_POSTFIELDS, v: UnsafeMutableRawPointer(mutating: byteArray))
 			let _ = curl.setOption(CURLOPT_POSTFIELDSIZE, int: byteArray.count)
 
-			let response = curl.performFully()
+			let response = curl.performFullySync()
 			XCTAssert(response.0 == 0)
 
 //			let body = UTF8Encoding.encode(bytes: response.2)
@@ -200,7 +200,7 @@ class PerfectCURLTests: XCTestCase {
     fclose(fo)
     XCTAssertEqual(w, content.utf8.count)
     let _ = curl.setOption(CURLOPT_READDATA, v: fi!)
-    let r = curl.performFully()
+    let r = curl.performFullySync()
     print(r.0)
     print(String(cString:r.2))
     print(String(cString:r.3))
@@ -211,7 +211,7 @@ class PerfectCURLTests: XCTestCase {
 		return [
 			("testCURLPost", testCURLPost),
 			("testCURLHeader", testCURLHeader),
-			("testPerformFullyShouldReturnResponseCode", testPerformFullyShouldReturnResponseCode),
+			("testPerformFullySync", testPerformFullySync),
 			("testCURLAsync", testCURLAsync),
 			("testSMTP", testSMTP),
 			("testCURL", testCURL)
