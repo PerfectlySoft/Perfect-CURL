@@ -122,7 +122,8 @@ public class CURL {
 
 	}
 
-	/// Clean up and reset the CURL object.
+	/// Clean up and reset the CURL object for further use.
+	/// Sets default options such as header/body read callbacks.
 	public func reset() {
 		guard let curl = self.curl else {
             return
@@ -131,9 +132,35 @@ public class CURL {
             curl_multi_remove_handle(multi, curl)
             self.multi = nil
         }
-        self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
+		if let slists = self.slists {
+			curl_slist_free_all(slists)
+			self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
+		}
         curl_easy_reset(curl)
         setCurlOpts()
+	}
+	
+	/// Cleanup and close the CURL request. Object should not be used again.
+	/// This is called automatically when the object goes out of scope.
+	/// It is safe to call this multiple times.
+	public func close() {
+		guard let curl = self.curl else {
+			return
+		}
+		if let multi = self.multi {
+			curl_multi_cleanup(multi)
+			self.multi = nil
+		}
+		if let slists = self.slists {
+			curl_slist_free_all(slists)
+			self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
+		}
+		curl_easy_cleanup(curl)
+		self.curl = nil
+	}
+	
+	deinit {
+		self.close()
 	}
 
 	private class ResponseAccumulator {
@@ -180,12 +207,8 @@ public class CURL {
         }
 		let code = curl_easy_perform(curl)
 		defer {
-			if self.headerBytes.count > 0 {
-				self.headerBytes = [UInt8]()
-			}
-			if self.bodyBytes.count > 0 {
-				self.bodyBytes = [UInt8]()
-			}
+			self.headerBytes = [UInt8]()
+			self.bodyBytes = [UInt8]()
 			self.reset()
 		}
 		if code != CURLE_OK {
@@ -245,16 +268,6 @@ public class CURL {
 			self.headerBytes.count > 0 ? self.headerBytes : nil,
 			self.bodyBytes.count > 0 ? self.bodyBytes : nil)
 	}
-
-//	/// Returns the result code for the last
-//	public func multiResult() -> CURLcode {
-//		var two: Int32 = 0
-//		let msg = curl_multi_info_read(self.multi!, &two)
-//		if msg != nil && msg.memory.msg == CURLMSG_DONE {
-//			return curl_get_msg_result(msg)
-//		}
-//		return CURLE_OK
-//	}
 
 	/// Returns the String message for the given CURL result code.
 	public func strError(code cod: CURLcode) -> String {
@@ -344,26 +357,6 @@ public class CURL {
 			()
 		}
 		return curl_easy_setopt_cstr(self.curl!, option, s)
-	}
-
-	/// Cleanup and close the CURL request.
-    public func close() {
-        guard let curl = self.curl else {
-            return
-        }
-		
-        if let multi = self.multi {
-            curl_multi_cleanup(multi)
-            self.multi = nil
-        }
-        curl_easy_cleanup(curl)
-
-        self.curl = nil
-        self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
-	}
-
-	deinit {
-		self.close()
 	}
 }
 
