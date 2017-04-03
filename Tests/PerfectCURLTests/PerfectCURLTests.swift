@@ -102,7 +102,7 @@ class PerfectCURLTests: XCTestCase {
             let code = curl.setOption(CURLOPT_HTTPHEADER, s: "\(n): \(v)" )
             XCTAssert(code == CURLE_OK)
         }
-		let response = curl.performFully()
+		let response = curl.performFullySync()
 		XCTAssert(response.0 == 0)
 
 //		let body = UTF8Encoding.encode(bytes: response.2)
@@ -120,6 +120,16 @@ class PerfectCURLTests: XCTestCase {
 //			XCTAssert(false, "Exception: \(e)")
 //		}
 	}
+    
+    func testPerformFullySync() {
+        let curl = CURL(url: "https://httpbin.org/get")
+
+        let response = curl.performFullySync()
+        XCTAssert(response.resultCode == 0)
+        XCTAssertEqual(response.responseCode, 200)
+        XCTAssert(response.headerBytes.count > 0)
+        XCTAssert(response.bodyBytes.count > 0)
+    }
 
 	func testCURLPost() {
 		let url = "https://httpbin.org/post"
@@ -134,7 +144,7 @@ class PerfectCURLTests: XCTestCase {
 			let _ = curl.setOption(CURLOPT_POSTFIELDS, v: UnsafeMutableRawPointer(mutating: byteArray))
 			let _ = curl.setOption(CURLOPT_POSTFIELDSIZE, int: byteArray.count)
 
-			let response = curl.performFully()
+			let response = curl.performFullySync()
 			XCTAssert(response.0 == 0)
 
 //			let body = UTF8Encoding.encode(bytes: response.2)
@@ -201,6 +211,7 @@ class PerfectCURLTests: XCTestCase {
 		return [
 			("testCURLPost", testCURLPost),
 			("testCURLHeader", testCURLHeader),
+			("testPerformFullySync", testPerformFullySync),
 			("testCURLAsync", testCURLAsync),
 //			("testSMTP", testSMTP),
 			("testCURL", testCURL)
