@@ -19,6 +19,7 @@
 
 import cURL
 import PerfectThread
+import PerfectNet
 
 /// This class is a wrapper around the CURL library. It permits network operations to be completed using cURL in a block or non-blocking manner.
 public class CURL {
@@ -122,7 +123,8 @@ public class CURL {
 
 	}
 
-	/// Clean up and reset the CURL object.
+	/// Clean up and reset the CURL object for further use.
+	/// Sets default options such as header/body read callbacks.
 	public func reset() {
 		guard let curl = self.curl else {
             return
@@ -131,9 +133,35 @@ public class CURL {
             curl_multi_remove_handle(multi, curl)
             self.multi = nil
         }
-        self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
+		if let slists = self.slists {
+			curl_slist_free_all(slists)
+			self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
+		}
         curl_easy_reset(curl)
         setCurlOpts()
+	}
+	
+	/// Cleanup and close the CURL request. Object should not be used again.
+	/// This is called automatically when the object goes out of scope.
+	/// It is safe to call this multiple times.
+	public func close() {
+		guard let curl = self.curl else {
+			return
+		}
+		if let multi = self.multi {
+			curl_multi_cleanup(multi)
+			self.multi = nil
+		}
+		if let slists = self.slists {
+			curl_slist_free_all(slists)
+			self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
+		}
+		curl_easy_cleanup(curl)
+		self.curl = nil
+	}
+	
+	deinit {
+		self.close()
 	}
 
 	private class ResponseAccumulator {
@@ -166,8 +194,47 @@ public class CURL {
 		if perf.0 == false { // done
 			closure(perf.1, accumulator.header, accumulator.body)
 		} else {
-			Threading.dispatch {
-				self.performInner(accumulator: accumulator, closure: closure)
+			
+			var timeout = 0
+			curl_multi_timeout(self.multi, &timeout)
+			if timeout == 0 {
+				return self.performInner(accumulator: accumulator, closure: closure)
+			}
+			let timeoutSeconds: Double
+			if timeout == -1 {
+				timeoutSeconds = 0.1
+			} else {
+				timeoutSeconds = Double(timeout) / 1000
+			}
+			
+			var fdsRd = fd_set(), fdsWr = fd_set(), fdsEx = fd_set()
+			var fdsZero = fd_set()
+			memset(&fdsZero, 0, MemoryLayout<fd_set>.size)
+			memset(&fdsRd, 0, MemoryLayout<fd_set>.size)
+			memset(&fdsWr, 0, MemoryLayout<fd_set>.size)
+			memset(&fdsEx, 0, MemoryLayout<fd_set>.size)
+			var max = Int32(0)
+			curl_multi_fdset(self.multi, &fdsRd, &fdsWr, &fdsEx, &max)
+			if max == -1 {
+				Threading.dispatch {
+					self.performInner(accumulator: accumulator, closure: closure)
+				}
+			} else if 0 != memcmp(&fdsZero, &fdsRd, MemoryLayout<fd_set>.size) {
+				// wait for read
+				NetEvent.add(socket: max, what: .read, timeoutSeconds: timeoutSeconds) {
+					_, w in
+					self.performInner(accumulator: accumulator, closure: closure)
+				}
+			} else if 0 != memcmp(&fdsZero, &fdsWr, MemoryLayout<fd_set>.size) {
+				// wait for write
+				NetEvent.add(socket: max, what: .write, timeoutSeconds: timeoutSeconds) {
+					_, w in
+					self.performInner(accumulator: accumulator, closure: closure)
+				}
+			} else {
+				Threading.dispatch {
+					self.performInner(accumulator: accumulator, closure: closure)
+				}
 			}
 		}
 	}
@@ -180,22 +247,18 @@ public class CURL {
         guard let curl = self.curl else {
             return (-1, [UInt8](), [UInt8]())
         }
-        let code = curl_easy_perform(curl)
-        defer {
-            if self.headerBytes.count > 0 {
-                self.headerBytes = [UInt8]()
-            }
-            if self.bodyBytes.count > 0 {
-                self.bodyBytes = [UInt8]()
-            }
-            self.reset()
-        }
-        if code != CURLE_OK {
-            let str = self.strError(code: code)
-            print(str)
-        }
-        return (Int(code.rawValue), self.headerBytes, self.bodyBytes)
-    }
+		    let code = curl_easy_perform(curl)
+		    defer {
+		     self.headerBytes = [UInt8]()
+		     self.bodyBytes = [UInt8]()
+		     self.reset()
+		    }
+		if code != CURLE_OK {
+			let str = self.strError(code: code)
+		  print(str)
+		}
+	  return (Int(code.rawValue), self.headerBytes, self.bodyBytes)
+	}
 
 	/// Performs a bit of work on the current request.
 	/// - returns: A tuple consisting of: Bool - should perform() be called again, Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
@@ -270,16 +333,6 @@ public class CURL {
         }
         return (Int(code.rawValue), self.responseCode, self.headerBytes, self.bodyBytes)
     }
-
-//	/// Returns the result code for the last
-//	public func multiResult() -> CURLcode {
-//		var two: Int32 = 0
-//		let msg = curl_multi_info_read(self.multi!, &two)
-//		if msg != nil && msg.memory.msg == CURLMSG_DONE {
-//			return curl_get_msg_result(msg)
-//		}
-//		return CURLE_OK
-//	}
 
 	/// Returns the String message for the given CURL result code.
 	public func strError(code cod: CURLcode) -> String {
@@ -369,26 +422,6 @@ public class CURL {
 			()
 		}
 		return curl_easy_setopt_cstr(self.curl!, option, s)
-	}
-
-	/// Cleanup and close the CURL request.
-    public func close() {
-        guard let curl = self.curl else {
-            return
-        }
-		
-        if let multi = self.multi {
-            curl_multi_cleanup(multi)
-            self.multi = nil
-        }
-        curl_easy_cleanup(curl)
-
-        self.curl = nil
-        self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
-	}
-
-	deinit {
-		self.close()
 	}
 }
 
