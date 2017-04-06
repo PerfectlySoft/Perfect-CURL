@@ -418,5 +418,59 @@ public class CURL {
 		}
 		return curl_easy_setopt_cstr(self.curl!, option, s)
 	}
-}
 
+  public class POSTFields {
+    internal var first = UnsafeMutablePointer<curl_httppost>(bitPattern: 0)
+    internal var last = UnsafeMutablePointer<curl_httppost>(bitPattern: 0)
+
+    /// constructor, create a blank form without any fields
+    /// must append each field manually
+    public init() { }
+
+    /// add a post field
+    /// - parameters:
+    ///   - key: post field name
+    ///   - value: post field value string
+    ///   - type: post field type, e.g., "text/html".
+    ///  - returns:
+    ///   CURLFORMCode, 0 for ok
+    public func append(key: String, value: String, mimeType: String = "") -> CURLFORMcode {
+      return curl_formadd_content(&first, &last, key, value, 0, mimeType.isEmpty ? nil : mimeType)
+    }//end append
+
+    /// add a post field
+    /// - parameters:
+    ///   - key: post field name
+    ///   - buffer: post field value, binary buffer
+    ///   - type: post field type, e.g., "image/jpeg".
+    ///  - throws:
+    ///   CURLFORMCode, 0 for ok
+    public func append(key: String, buffer: [Int8], mimeType: String = "") -> CURLFORMcode {
+      return curl_formadd_content(&first, &last, key, buffer, buffer.count, mimeType.isEmpty ? nil : mimeType)
+    }//end append
+
+    /// add a post field
+    /// - parameters:
+    ///   - key: post field name
+    ///   - value: post field value string
+    ///   - type: post field mime type, e.g., "image/jpeg".
+    ///  - throws:
+    ///   CURLFORMCode, 0 for ok
+    public func append(key: String, path: String, mimeType: String = "") -> CURLFORMcode {
+      return curl_formadd_file(&first, &last, key, path, mimeType.isEmpty ? nil : mimeType)
+    }//end append
+
+    deinit {
+      curl_formfree(first)
+      //curl_formfree(last)
+    }//end deinit
+  }//end class
+
+  /// Post a form with different fields.
+  public func formAddPost(fields: POSTFields) ->CURLcode {
+    guard let p = fields.first else {
+      return CURLcode(rawValue: 4096)
+    }//end guard
+    return curl_form_post(self.curl, p)
+  }//end formAddPost
+}
