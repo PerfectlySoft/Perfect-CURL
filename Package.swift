@@ -23,7 +23,7 @@ let package = Package(
 	name: "PerfectCURL",
 	targets: [],
 	dependencies: [
-		.Package(url: "https://github.com/PerfectlySoft/Perfect-libcurl.git", majorVersion: 2),
+		.Package(url: "https://github.com/PerfectlySoft/Perfect-libcurl.git", versions: Version(2,0,2)..<Version(3,0,0)),
 		.Package(url: "https://github.com/PerfectlySoft/Perfect-Net.git", majorVersion: 2)
 	],
 	exclude: []
