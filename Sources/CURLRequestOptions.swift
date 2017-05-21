@@ -36,6 +36,8 @@ extension CURLRequest.Option {
 			curl.setOption(CURLOPT_URL, s: optString)
 		case .port(let optInt):
 			curl.setOption(CURLOPT_PORT, int: optInt)
+		case .failOnError:
+			curl.setOption(CURLOPT_FAILONERROR, int: 1)
 		case .userPwd(let optString):
 			curl.setOption(CURLOPT_USERPWD, s: optString)
 		case .proxy(let optString):

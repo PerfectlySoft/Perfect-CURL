@@ -28,7 +28,7 @@ extension CURLResponse.Info.StringValue: CURLResponseInfo {
 	public typealias ValueType = String
 	private var infoValue: CURLINFO {
 		switch self {
-		case .effectiveURL: return CURLINFO_EFFECTIVE_URL
+		case .url: return CURLINFO_EFFECTIVE_URL
 		case .ftpEntryPath: return CURLINFO_FTP_ENTRY_PATH
 		case .redirectURL: return CURLINFO_REDIRECT_URL
 		case .localIP: return CURLINFO_LOCAL_IP

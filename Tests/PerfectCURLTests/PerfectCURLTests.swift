@@ -29,6 +29,20 @@ class PerfectCURLTests: XCTestCase {
 	
 	let headersTestURL = "https://httpbin.org/headers"
 	let postTestURL = "https://httpbin.org/post"
+	let errorTestURL = "https://httpbin.org/status/500"
+	
+	func testCURLError() {
+		let url = errorTestURL
+		let request = CURLRequest(url, .failOnError)
+		do {
+			_ = try request.perform()
+			XCTAssert(false, "500 response did not fail.")
+		} catch let error as CURLResponse.Error {
+			XCTAssertEqual(error.response.responseCode, 500)
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
 	
 	func testCURLSync() {
 		let url = headersTestURL
@@ -37,6 +51,9 @@ class PerfectCURLTests: XCTestCase {
 			let response = try request.perform()
 			let responseCode = response.responseCode
 			XCTAssertEqual(responseCode, 200)
+			XCTAssertEqual(response.url, url)
+			XCTAssertEqual(response.get(.connection), "keep-alive")
+			XCTAssertGreaterThan(response.get(.totalTime) ?? 0.0, 0.0)
 			XCTAssertGreaterThan(response.headers.count, 0)
 			XCTAssertGreaterThan(response.bodyBytes.count, 0)
 		} catch {
@@ -49,6 +66,7 @@ class PerfectCURLTests: XCTestCase {
 			let response = try request.perform()
 			let responseCode = response.responseCode
 			XCTAssertEqual(responseCode, 200)
+			XCTAssertEqual(response.url, url)
 			XCTAssertGreaterThan(response.headers.count, 0)
 			XCTAssertGreaterThan(response.bodyBytes.count, 0)
 		} catch {
@@ -79,25 +97,27 @@ class PerfectCURLTests: XCTestCase {
 		let url = headersTestURL
 		let accept = CURLRequest.Header.Name.accept
 		let custom = CURLRequest.Header.Name.custom(name: "X-Extra")
-		let acceptValue = "application/json"
+		let custom2 = CURLRequest.Header.Name.custom(name: "X-Extra-2")
 		let customValueFalse = "notValue123"
 		let customValue = "value123"
 		
 		let request = CURLRequest(url,
 		                          .addHeader(custom, customValueFalse),
-		                          .addHeader(accept, acceptValue),
+		                          .addHeader(custom2, ""),
+		                          .removeHeader(accept),
 		                          .replaceHeader(custom, customValue))
 		                          
 		do {
 			let response = try request.perform()
 			let json = response.bodyJSON
 			guard let headers = json["headers"] as? [String:Any],
-					let resAccept = headers[accept.standardName] as? String,
-					let resCustom = headers[custom.standardName] as? String else {
-				return XCTAssert(false, "\(accept.standardName) or \(custom.standardName) not found in \(json)")
+					let resCustom = headers[custom.standardName] as? String,
+					let resCustom2 = headers[custom2.standardName] as? String else {
+				return XCTAssert(false, "\(custom.standardName) not found in \(json)")
 			}
-			XCTAssertEqual(acceptValue, resAccept)
+			XCTAssertNil(headers[accept.standardName])
 			XCTAssertEqual(customValue, resCustom)
+			XCTAssertEqual("", resCustom2)
 		} catch {
 			XCTAssert(false, "\(error)")
 		}
@@ -107,24 +127,22 @@ class PerfectCURLTests: XCTestCase {
 		let url = headersTestURL
 		let accept = CURLRequest.Header.Name.accept
 		let custom = CURLRequest.Header.Name.custom(name: "X-Extra")
-		let acceptValue = "application/json"
 		let customValueFalse = "notValue123"
 		let customValue = "value123"
 		
 		let request = CURLRequest(url)
 		request.addHeader(custom, value: customValueFalse)
-		request.addHeader(accept, value: acceptValue)
+		request.removeHeader(accept)
 		request.replaceHeader(custom, value: customValue)
 		
 		do {
 			let response = try request.perform()
 			let json = response.bodyJSON
 			guard let headers = json["headers"] as? [String:Any],
-				let resAccept = headers[accept.standardName] as? String,
 				let resCustom = headers[custom.standardName] as? String else {
 					return XCTAssert(false, "\(accept.standardName) or \(custom.standardName) not found in \(json)")
 			}
-			XCTAssertEqual(acceptValue, resAccept)
+			XCTAssertNil(headers[accept.standardName])
 			XCTAssertEqual(customValue, resCustom)
 		} catch {
 			XCTAssert(false, "\(error)")

@@ -62,7 +62,7 @@ open class CURLResponse {
 	public enum Info {
 		/// Info keys with String values.
 		public enum StringValue {
-			case effectiveURL,
+			case url,
 				ftpEntryPath,
 				redirectURL,
 				localIP,
@@ -219,7 +219,7 @@ extension CURLResponse {
 				let crl = Unmanaged<CURLResponse>.fromOpaque(p!).takeUnretainedValue()
 				if let bytes = a?.assumingMemoryBound(to: UInt8.self) {
 					let fullCount = size*num
-					crl.addHeaderLine(UnsafeBufferPointer(start: bytes, count: fullCount))
+					crl.addHeaderLine(UnsafeBufferPointer(start: bytes, count: fullCount-2))
 					return fullCount
 				}
 				return 0
@@ -245,7 +245,7 @@ extension CURLResponse {
 
 public extension CURLResponse {
 	/// Get the URL which the request may have been redirected to.
-	public var effectiveURL: String { return get(.effectiveURL) ?? "" }
+	public var url: String { return get(.url) ?? "" }
 	/// Get the HTTP response code
 	public var responseCode: Int { return get(.responseCode) ?? 0 }
 	/// Get the response body converted from UTF-8.

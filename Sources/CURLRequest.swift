@@ -56,6 +56,7 @@ open class CURLRequest {
 	public enum Option {
 		case url(String),
 		port(Int),
+		failOnError, // fail on http error codes >= 400
 		
 		userPwd(String),
 		
@@ -153,9 +154,7 @@ public extension CURLRequest {
 	/// Reset the request. Clears all options so that the object can be reused.
 	/// New options can be provided.
 	func reset(_ option: Option, _ options: Option...) {
-		curl.reset()
-		postFields = nil
-		self.options = [option] + options
+		reset([option] + options)
 	}
 }
 
