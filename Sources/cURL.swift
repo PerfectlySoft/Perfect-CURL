@@ -32,7 +32,10 @@ public class CURL {
 	var curl: UnsafeMutableRawPointer?
 	var multi: UnsafeMutableRawPointer?
 
-	var slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
+	typealias SList = UnsafeMutablePointer<curl_slist>
+	
+	var slistMap = [UInt32:SList]()
+//	var slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
 
 	var headerBytes = [UInt8]()
 	var bodyBytes = [UInt8]()
@@ -123,6 +126,14 @@ public class CURL {
 
 	}
 
+	private func clearSListMap() {
+		slistMap.forEach {
+			_, ptr in
+			curl_slist_free_all(ptr)
+		}
+		slistMap = [:]
+	}
+	
 	/// Clean up and reset the CURL object for further use.
 	/// Sets default options such as header/body read callbacks.
 	public func reset() {
@@ -130,14 +141,12 @@ public class CURL {
             return
         }
         if let multi = self.multi {
-            curl_multi_remove_handle(multi, curl)
+			curl_multi_remove_handle(multi, curl)
+			curl_multi_cleanup(multi)
             self.multi = nil
         }
-		if let slists = self.slists {
-			curl_slist_free_all(slists)
-			self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
-		}
         curl_easy_reset(curl)
+		clearSListMap()
         setCurlOpts()
 	}
 	
@@ -149,14 +158,12 @@ public class CURL {
 			return
 		}
 		if let multi = self.multi {
+			curl_multi_remove_handle(multi, curl)
 			curl_multi_cleanup(multi)
 			self.multi = nil
 		}
-		if let slists = self.slists {
-			curl_slist_free_all(slists)
-			self.slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
-		}
 		curl_easy_cleanup(curl)
+		clearSListMap()
 		self.curl = nil
 	}
 	
@@ -164,26 +171,33 @@ public class CURL {
 		self.close()
 	}
 
-	private class ResponseAccumulator {
+	private class InternalResponseAccumulator {
 		var header = [UInt8]()
 		var body = [UInt8]()
 	}
 
+	func addSLists() {
+		slistMap.forEach {
+			key, value in
+			curl_easy_setopt_slist(curl, CURLoption(rawValue: key), value)
+		}
+	}
+	
 	/// Perform the CURL request in a non-blocking manner. The closure will be called with the resulting code, header and body data.
 	public func perform(closure: @escaping (Int, [UInt8], [UInt8]) -> ()) {
         guard let curl = self.curl else {
             return closure(-1, [UInt8](), [UInt8]())
-        }
-		let accum = ResponseAccumulator()
+		}
+		addSLists()
+		let accum = InternalResponseAccumulator()
 		if nil == self.multi {
 			self.multi = curl_multi_init()
 		}
 		curl_multi_add_handle(multi, curl)
-
 		performInner(accumulator: accum, closure: closure)
 	}
 
-	private func performInner(accumulator: ResponseAccumulator, closure: @escaping (Int, [UInt8], [UInt8]) -> ()) {
+	private func performInner(accumulator: InternalResponseAccumulator, closure: @escaping (Int, [UInt8], [UInt8]) -> ()) {
 		let perf = self.perform()
 		if let h = perf.2 {
 			_ = accumulator.header.append(contentsOf: h)
@@ -194,51 +208,56 @@ public class CURL {
 		if perf.0 == false { // done
 			closure(perf.1, accumulator.header, accumulator.body)
 		} else {
-			
-			var timeout = 0
-			curl_multi_timeout(self.multi, &timeout)
-			if timeout == 0 {
-				return self.performInner(accumulator: accumulator, closure: closure)
-			}
-			let timeoutSeconds: Double
-			if timeout == -1 {
-				timeoutSeconds = 0.1
-			} else {
-				timeoutSeconds = Double(timeout) / 1000
-			}
-			
-			var fdsRd = fd_set(), fdsWr = fd_set(), fdsEx = fd_set()
-			var fdsZero = fd_set()
-			memset(&fdsZero, 0, MemoryLayout<fd_set>.size)
-			memset(&fdsRd, 0, MemoryLayout<fd_set>.size)
-			memset(&fdsWr, 0, MemoryLayout<fd_set>.size)
-			memset(&fdsEx, 0, MemoryLayout<fd_set>.size)
-			var max = Int32(0)
-			curl_multi_fdset(self.multi, &fdsRd, &fdsWr, &fdsEx, &max)
-			if max == -1 {
-				Threading.dispatch {
-					self.performInner(accumulator: accumulator, closure: closure)
-				}
-			} else if 0 != memcmp(&fdsZero, &fdsRd, MemoryLayout<fd_set>.size) {
-				// wait for read
-				NetEvent.add(socket: max, what: .read, timeoutSeconds: timeoutSeconds) {
-					_, w in
-					self.performInner(accumulator: accumulator, closure: closure)
-				}
-			} else if 0 != memcmp(&fdsZero, &fdsWr, MemoryLayout<fd_set>.size) {
-				// wait for write
-				NetEvent.add(socket: max, what: .write, timeoutSeconds: timeoutSeconds) {
-					_, w in
-					self.performInner(accumulator: accumulator, closure: closure)
-				}
-			} else {
-				Threading.dispatch {
-					self.performInner(accumulator: accumulator, closure: closure)
-				}
+			ioWait {
+				self.performInner(accumulator: accumulator, closure: closure)
 			}
 		}
 	}
 
+	func ioWait(_ closure: @escaping () -> ()) {
+		var timeout = 0
+		curl_multi_timeout(self.multi, &timeout)
+		if timeout == 0 {
+			return closure()
+		}
+		let timeoutSeconds: Double
+		if timeout == -1 {
+			timeoutSeconds = 0.1
+		} else {
+			timeoutSeconds = Double(timeout) / 1000
+		}
+		
+		var fdsRd = fd_set(), fdsWr = fd_set(), fdsEx = fd_set()
+		var fdsZero = fd_set()
+		memset(&fdsZero, 0, MemoryLayout<fd_set>.size)
+		memset(&fdsRd, 0, MemoryLayout<fd_set>.size)
+		memset(&fdsWr, 0, MemoryLayout<fd_set>.size)
+		memset(&fdsEx, 0, MemoryLayout<fd_set>.size)
+		var max = Int32(0)
+		curl_multi_fdset(self.multi, &fdsRd, &fdsWr, &fdsEx, &max)
+		if max == -1 {
+			Threading.dispatch {
+				closure()
+			}
+		} else if 0 != memcmp(&fdsZero, &fdsRd, MemoryLayout<fd_set>.size) {
+			// wait for read
+			NetEvent.add(socket: max, what: .read, timeoutSeconds: timeoutSeconds) {
+				_, w in
+				closure()
+			}
+		} else if 0 != memcmp(&fdsZero, &fdsWr, MemoryLayout<fd_set>.size) {
+			// wait for write
+			NetEvent.add(socket: max, what: .write, timeoutSeconds: timeoutSeconds) {
+				_, w in
+				closure()
+			}
+		} else {
+			Threading.dispatch {
+				closure()
+			}
+		}
+	}
+	
 	/// Performs the request, blocking the current thread until it completes.
 	/// - returns: A tuple consisting of: Int - the result code, [UInt8] - the header bytes if any, [UInt8] - the body bytes if any
 	public func performFully() -> (Int, [UInt8], [UInt8]) {
@@ -246,6 +265,7 @@ public class CURL {
 		guard let curl = self.curl else {
 			return (-1, [UInt8](), [UInt8]())
 		}
+		addSLists()
 		let code = curl_easy_perform(curl)
 		defer {
 			self.headerBytes = [UInt8]()
@@ -265,6 +285,7 @@ public class CURL {
 		guard let curl = self.curl else {
 			return (-1, -1, [UInt8](), [UInt8]())
 		}
+		addSLists()
 		let code = curl_easy_perform(curl)
 		defer {
 			self.headerBytes = [UInt8]()
@@ -283,8 +304,9 @@ public class CURL {
     public func perform() -> (Bool, Int, [UInt8]?, [UInt8]?) {
         guard let curl = self.curl else {
             return (false, -1, nil, nil)
-        }
+		}
 		if self.multi == nil {
+			addSLists()
 			let multi = curl_multi_init()
             self.multi = multi
 			curl_multi_add_handle(multi, curl)
@@ -333,15 +355,25 @@ public class CURL {
 	public func strError(code cod: CURLcode) -> String {
 		return String(validatingUTF8: curl_easy_strerror(cod))!
 	}
-
+	
 	/// Returns the Int value for the given CURLINFO.
-    public func getInfo(_ info: CURLINFO) -> (Int, CURLcode) {
-        guard let curl = self.curl else {
-            return (-1, CURLE_FAILED_INIT)
-        }
+	public func getInfo(_ info: CURLINFO) -> (Int, CURLcode) {
+		guard let curl = self.curl else {
+			return (-1, CURLE_FAILED_INIT)
+		}
 		var i = 0
 		let c = curl_easy_getinfo_long(curl, info, &i)
 		return (i, c)
+	}
+	
+	/// Returns the Double value for the given CURLINFO.
+	public func getInfo(_ info: CURLINFO) -> (Double, CURLcode) {
+		guard let curl = self.curl else {
+			return (-1, CURLE_FAILED_INIT)
+		}
+		var d = 0.0
+		let c = curl_easy_getinfo_double(curl, info, &d)
+		return (d, c)
 	}
 
 	/// Returns the String value for the given CURLINFO.
@@ -349,10 +381,12 @@ public class CURL {
         guard let curl = self.curl else {
             return ("Not initialized", CURLE_FAILED_INIT)
         }
-		let i = UnsafeMutablePointer<UnsafePointer<Int8>?>.allocate(capacity: 1)
-		defer { i.deinitialize(count: 1); i.deallocate(capacity: 1) }
-		let code = curl_easy_getinfo_cstr(curl, info, i)
-		return (code != CURLE_OK ? "" : String(validatingUTF8: i.pointee!)!, code)
+		var i: UnsafePointer<Int8>? = nil
+		let code = curl_easy_getinfo_cstr(curl, info, &i)
+		guard code == CURLE_OK, let p = i, let str = String(validatingUTF8: p) else {
+			return ("", code)
+		}
+		return (str, code)
 	}
 	
 	/// Sets the Int64 option value.
@@ -377,11 +411,12 @@ public class CURL {
 	/// Note that the pointer value is not copied or otherwise manipulated or saved.
 	/// It is up to the caller to ensure the pointer value has a lifetime which corresponds to its usage.
 	@discardableResult
-    public func setOption(_ option: CURLoption, v: UnsafeMutableRawPointer) -> CURLcode {
+    public func setOption(_ option: CURLoption, v: UnsafeRawPointer) -> CURLcode {
         guard let curl = self.curl else {
             return CURLE_FAILED_INIT
         }
-		return curl_easy_setopt_void(curl, option, v)
+		let nv = UnsafeMutableRawPointer(mutating: v)
+		return curl_easy_setopt_void(curl, option, nv)
 	}
 
 	/// Sets the callback function option value.
@@ -393,6 +428,12 @@ public class CURL {
 		return curl_easy_setopt_func(curl, option, f)
 	}
 
+	private func appendSList(key: UInt32, value: String) {
+		let old = slistMap[key]
+		let new = curl_slist_append(old, value)
+		slistMap[key] = new
+	}
+	
 	/// Sets the String option value.
 	@discardableResult
     public func setOption(_ option: CURLoption, s: String) -> CURLcode {
@@ -407,70 +448,67 @@ public class CURL {
 			CURLOPT_QUOTE.rawValue,
 			//CURLOPT_MAIL_FROM.rawValue,
 			CURLOPT_MAIL_RCPT.rawValue:
-            let slists = curl_slist_append(self.slists, s)
-			guard slists != nil else {
-				return CURLE_OUT_OF_MEMORY
-			}
-            self.slists = slists
-			return curl_easy_setopt_slist(curl, option, self.slists)
+			appendSList(key: option.rawValue, value: s)
+			return CURLE_OK
 		default:
 			()
 		}
-		return curl_easy_setopt_cstr(self.curl!, option, s)
+		return curl_easy_setopt_cstr(curl, option, s)
 	}
 
-  public class POSTFields {
-    internal var first = UnsafeMutablePointer<curl_httppost>(bitPattern: 0)
-    internal var last = UnsafeMutablePointer<curl_httppost>(bitPattern: 0)
+	public class POSTFields {
+		var first = UnsafeMutablePointer<curl_httppost>(bitPattern: 0)
+		var last = UnsafeMutablePointer<curl_httppost>(bitPattern: 0)
 
-    /// constructor, create a blank form without any fields
-    /// must append each field manually
-    public init() { }
+		/// constructor, create a blank form without any fields
+		/// must append each field manually
+		public init() { }
 
-    /// add a post field
-    /// - parameters:
-    ///   - key: post field name
-    ///   - value: post field value string
-    ///   - type: post field type, e.g., "text/html".
-    ///  - returns:
-    ///   CURLFORMCode, 0 for ok
-    public func append(key: String, value: String, mimeType: String = "") -> CURLFORMcode {
-      return curl_formadd_content(&first, &last, key, value, 0, mimeType.isEmpty ? nil : mimeType)
-    }//end append
+		/// add a post field
+		/// - parameters:
+		///   - key: post field name
+		///   - value: post field value string
+		///   - type: post field type, e.g., "text/html".
+		///  - returns:
+		///   CURLFORMCode, 0 for ok
+		public func append(key: String, value: String, mimeType: String = "") -> CURLFORMcode {
+			return curl_formadd_content(&first, &last, key, value, 0, mimeType.isEmpty ? nil : mimeType)
+		}//end append
 
-    /// add a post field
-    /// - parameters:
-    ///   - key: post field name
-    ///   - buffer: post field value, binary buffer
-    ///   - type: post field type, e.g., "image/jpeg".
-    ///  - throws:
-    ///   CURLFORMCode, 0 for ok
-    public func append(key: String, buffer: [Int8], mimeType: String = "") -> CURLFORMcode {
-      return curl_formadd_content(&first, &last, key, buffer, buffer.count, mimeType.isEmpty ? nil : mimeType)
-    }//end append
+		/// add a post field
+		/// - parameters:
+		///   - key: post field name
+		///   - buffer: post field value, binary buffer
+		///   - type: post field type, e.g., "image/jpeg".
+		///  - throws:
+		///   CURLFORMCode, 0 for ok
+		public func append(key: String, buffer: [Int8], mimeType: String = "") -> CURLFORMcode {
+			return curl_formadd_content(&first, &last, key, buffer, buffer.count, mimeType.isEmpty ? nil : mimeType)
+		}//end append
 
-    /// add a post field
-    /// - parameters:
-    ///   - key: post field name
-    ///   - value: post field value string
-    ///   - type: post field mime type, e.g., "image/jpeg".
-    ///  - throws:
-    ///   CURLFORMCode, 0 for ok
-    public func append(key: String, path: String, mimeType: String = "") -> CURLFORMcode {
-      return curl_formadd_file(&first, &last, key, path, mimeType.isEmpty ? nil : mimeType)
-    }//end append
+		/// add a post field
+		/// - parameters:
+		///   - key: post field name
+		///   - value: post field value string
+		///   - type: post field mime type, e.g., "image/jpeg".
+		///  - throws:
+		///   CURLFORMCode, 0 for ok
+		public func append(key: String, path: String, mimeType: String = "") -> CURLFORMcode {
+			return curl_formadd_file(&first, &last, key, path, mimeType.isEmpty ? nil : mimeType)
+		}//end append
 
-    deinit {
-      curl_formfree(first)
-      //curl_formfree(last)
-    }//end deinit
-  }//end class
+		deinit {
+			curl_formfree(first)
+		//curl_formfree(last)
+		}//end deinit
+	}//end class
 
-  /// Post a form with different fields.
-  public func formAddPost(fields: POSTFields) ->CURLcode {
-    guard let p = fields.first else {
-      return CURLcode(rawValue: 4096)
-    }//end guard
-    return curl_form_post(self.curl, p)
-  }//end formAddPost
+	/// Post a form with different fields.
+	@discardableResult
+	public func formAddPost(fields: POSTFields) -> CURLcode {
+		guard let p = fields.first else {
+			return CURLcode(rawValue: 4096)
+		}//end guard
+		return curl_form_post(self.curl, p)
+	}//end formAddPost
 }
