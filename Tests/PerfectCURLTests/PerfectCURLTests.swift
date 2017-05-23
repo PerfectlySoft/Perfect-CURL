@@ -46,7 +46,7 @@ class PerfectCURLTests: XCTestCase {
 	
 	func testCURLSync() {
 		let url = headersTestURL
-		let request = CURLRequest(url)
+		let request = CURLRequest(url, .failOnError)
 		do {
 			let response = try request.perform()
 			let responseCode = response.responseCode
@@ -78,7 +78,7 @@ class PerfectCURLTests: XCTestCase {
 		let clientExpectation = self.expectation(description: "client")
 		let url = headersTestURL
 		
-		CURLRequest(url).perform {
+		CURLRequest(url, .failOnError).perform {
 			confirmation in
 			do {
 				let response = try confirmation()
@@ -92,6 +92,20 @@ class PerfectCURLTests: XCTestCase {
 		}
 		self.waitForExpectations(timeout: 10000)
 	}
+	
+	func testCURLPromise() {
+		let url = headersTestURL
+		
+		do {
+			let responseCode = try CURLRequest(url, .failOnError).promise().then {
+					return try $0().responseCode
+				}.wait()
+			XCTAssertNotNil(responseCode)
+			XCTAssertEqual(responseCode ?? 0, 200)
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
 
 	func testCURLHeader() {
 		let url = headersTestURL
@@ -101,7 +115,7 @@ class PerfectCURLTests: XCTestCase {
 		let customValueFalse = "notValue123"
 		let customValue = "value123"
 		
-		let request = CURLRequest(url,
+		let request = CURLRequest(url, .failOnError,
 		                          .addHeader(custom, customValueFalse),
 		                          .addHeader(custom2, ""),
 		                          .removeHeader(accept),
@@ -130,7 +144,7 @@ class PerfectCURLTests: XCTestCase {
 		let customValueFalse = "notValue123"
 		let customValue = "value123"
 		
-		let request = CURLRequest(url)
+		let request = CURLRequest(url, .failOnError)
 		request.addHeader(custom, value: customValueFalse)
 		request.removeHeader(accept)
 		request.replaceHeader(custom, value: customValue)
@@ -154,7 +168,7 @@ class PerfectCURLTests: XCTestCase {
 		let postParamString = "key1=value1&key2=value2"
 		
 		do {
-			let json = try CURLRequest(url, .postString(postParamString)).perform().bodyJSON
+			let json = try CURLRequest(url, .postString(postParamString), .failOnError).perform().bodyJSON
 			guard let form = json["form"] as? [String:Any],
 				let key1 = form["key1"] as? String,
 				let key2 = form["key2"] as? String else {
@@ -177,7 +191,7 @@ class PerfectCURLTests: XCTestCase {
 			defer { testFile.delete() }
 			try testFile.write(string: testFileContents)
 			testFile.close()
-			let json = try CURLRequest(url,
+			let json = try CURLRequest(url, .failOnError,
 			                           .postField(.init(name: "key1", value: "value1")),
 			                           .postField(.init(name: "key2", value: "value2")),
 			                           .postField(.init(name: "file1", filePath: testFile.path, mimeType: "text/plain")))

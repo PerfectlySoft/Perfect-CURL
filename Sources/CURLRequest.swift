@@ -20,6 +20,7 @@
 import cURL
 import PerfectHTTP
 import PerfectNet
+import PerfectThread
 
 /// Creates and configures a CURL request.
 /// init with a URL and zero or more options.
@@ -141,6 +142,22 @@ public extension CURLRequest {
 	func perform(_ completion: @escaping (CURLResponse.Confirmation) -> ()) {
 		applyOptions()
 		CURLResponse(curl).complete(completion)
+	}
+	
+	/// Execute the request asynchronously. 
+	/// Returns a Promise object which can be used to monitor the operation.
+	func promise() -> Promise<CURLResponse> {
+		return Promise {
+			p in
+			self.perform {
+				confirmation in
+				do {
+					p.set(try confirmation())
+				} catch {
+					p.fail(error)
+				}
+			}
+		}
 	}
 	
 	/// Reset the request. Clears all options so that the object can be reused.
