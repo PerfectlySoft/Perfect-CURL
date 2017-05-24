@@ -191,7 +191,7 @@ public extension CURLResponse {
 }
 ```
 
-In addition, a few convenience properties have been added for pulling commonly requested data from a response such as `url` and `responseCode`.
+For convenience properties have been added for pulling commonly requested data from a response such as `url` and `responseCode`.
 
 The following examples show how to pull header and other meta-data from the request:
 
