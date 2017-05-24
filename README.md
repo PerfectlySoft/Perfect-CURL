@@ -114,14 +114,14 @@ The third function, `CURLRequest.perform`, will return a `Promise<CURLResponse>`
 
 The following three example shows how each of the functions are used. Each will perform a request and convert the resulting response body from JSON into a [String:Any] dictionary.
 
-• Synchronously fetch a simple API endpoint and decode it from JSON:
+• Synchronously fetch an API endpoint and decode it from JSON:
 
 ```swift
 let url = "https://httpbin.org/get?p1=v1&p2=v2"
 let json: [String:Any] = try CURLRequest(url).perform().bodyJSON
 ```
 
-• Asynchronously fetch a simple API endpoint and decode it from JSON:
+• Asynchronously fetch an API endpoint and decode it from JSON:
 
 ```swift
 let url = "https://httpbin.org/post"
@@ -139,7 +139,7 @@ CURLRequest(url).perform {
 }
 ```
 
-• Asynchronously fetch a simple API endpoint using a Promise and decode it from JSON:
+• Asynchronously fetch an API endpoint using a Promise and decode it from JSON:
 
 ```swift
 let url = "https://httpbin.org/get?p1=v1&p2=v2"
