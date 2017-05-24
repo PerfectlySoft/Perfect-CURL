@@ -144,7 +144,7 @@ CURLRequest(url).perform {
 ```swift
 let url = "https://httpbin.org/get?p1=v1&p2=v2"
 if let json = try CURLRequest(url).promise().then { return try $0().bodyJSON }.wait() {
-	// ...
+	...
 }
 ```
 
