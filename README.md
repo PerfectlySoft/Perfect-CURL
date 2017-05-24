@@ -132,9 +132,9 @@ CURLRequest(url).perform {
 		let json: [String:Any] = response.bodyJSON
 		
 	} catch let error as CURLResponse.Error {
-			print("Failed: response code \(error.response.responseCode)")
+		print("Failed: response code \(error.response.responseCode)")
 	} catch {
-			print("Fatal error \(error)")
+		print("Fatal error \(error)")
 	}
 }
 ```
