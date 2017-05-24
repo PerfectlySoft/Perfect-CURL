@@ -73,7 +73,7 @@ extension CURLRequest.Option {
 		case .autoReferer(let optBool):
 			curl.setOption(CURLOPT_AUTOREFERER, int: optBool ? 1 : 0)
 		case .krbLevel(let optString):
-			curl.setOption(CURLOPT_KRBLEVEL, s: optString)
+			curl.setOption(CURLOPT_KRBLEVEL, s: optString.description)
 		case .addHeader(let optName, let optValue):
 			headerAdd(curl, optName: optName, optValue: optValue)
 		case .addHeaders(let optArray):
@@ -86,13 +86,13 @@ extension CURLRequest.Option {
 		case .sslCert(let optString):
 			curl.setOption(CURLOPT_SSLCERT, s: optString)
 		case .sslCertType(let optString):
-			curl.setOption(CURLOPT_SSLCERTTYPE, s: optString)
+			curl.setOption(CURLOPT_SSLCERTTYPE, s: optString.description)
 		case .sslKey(let optString):
 			curl.setOption(CURLOPT_SSLKEY, s: optString)
 		case .sslKeyPwd(let optString):
 			curl.setOption(CURLOPT_KEYPASSWD, s: optString)
 		case .sslKeyType(let optString):
-			curl.setOption(CURLOPT_SSLKEYTYPE, s: optString)
+			curl.setOption(CURLOPT_SSLKEYTYPE, s: optString.description)
 		case .sslVersion(let optVersion):
 			let value: Int
 			switch optVersion {
@@ -107,9 +107,9 @@ extension CURLRequest.Option {
 			curl.setOption(CURLOPT_SSL_VERIFYPEER, int: optBool ? 1 : 0)
 		case .sslVerifyHost(let optBool):
 			curl.setOption(CURLOPT_SSL_VERIFYHOST, int: optBool ? 2 : 0)
-		case .sslCAInfo(let optString):
+		case .sslCAFilePath(let optString):
 			curl.setOption(CURLOPT_CAINFO, s: optString)
-		case .sslCAPath(let optString):
+		case .sslCADirPath(let optString):
 			curl.setOption(CURLOPT_CAPATH, s: optString)
 		case .sslPinnedPublicKey(let optString):
 			curl.setOption(CURLOPT_PINNEDPUBLICKEY, s: optString)
@@ -154,9 +154,9 @@ extension CURLRequest.Option {
 		case .postString(let optString):
 			curl.setOption(CURLOPT_COPYPOSTFIELDS, s: optString)
 		case .mailFrom(let optString):
-			curl.setOption(CURLOPT_COOKIEJAR, s: optString)
+			curl.setOption(CURLOPT_MAIL_FROM, s: optString)
 		case .mailRcpt(let optString):
-			curl.setOption(CURLOPT_COOKIEJAR, s: optString)
+			curl.setOption(CURLOPT_MAIL_RCPT, s: optString)
 		}
 	}
 }

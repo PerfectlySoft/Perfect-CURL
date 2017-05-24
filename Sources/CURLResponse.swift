@@ -33,15 +33,6 @@ open class CURLResponse {
 	public typealias Header = HTTPResponseHeader
 	/// A confirmation func thats used to obtain an asynchrnous response.
 	public typealias Confirmation = () throws -> CURLResponse
-	
-	// TODO
-//	public struct ProgressReport {
-//		let downloadTotal: Int
-//		let downloadNow: Int
-//		let uploadTotal: Int
-//		let uploadNow: Int
-//	}
-	
 	/// An error thrown while retrieving a response.
 	public struct Error: Swift.Error {
 		/// The curl specific request response code.
@@ -62,46 +53,78 @@ open class CURLResponse {
 	public enum Info {
 		/// Info keys with String values.
 		public enum StringValue {
-			case url,
+			case
+				/// The effective URL for the request/response.
+				/// This is ultimately the URL from which the response data came from.
+				/// This may differ from the request's URL in the case of a redirect.
+				url,
+				/// The initial path that the request ended up at after logging in to the FTP server.
 				ftpEntryPath,
+				/// The URL that the request *would have* been redirected to.
 				redirectURL,
+				/// The local IP address that the request used most recently.
 				localIP,
+				/// The remote IP address that the request most recently connected to.
 				primaryIP,
-				contentType
+				/// The content type for the request. This is read from the "Content-Type" header.
+				contentType // TODO: this is provided directly by curl (for obvious reason) but might 
+							// be confusing given that we parse headers and make them all available through `get`
 		}
 		/// Info keys with Int values.
 		public enum IntValue {
-			case responseCode,
+			case
+				/// The last received HTTP, FTP or SMTP response code.
+				responseCode,
+				/// The total size in bytes of all received headers.
 				headerSize,
+				/// The total size of the issued request in bytes.
+				/// This will indicate the cumulative total of all requests sent in the case of a redirect.
 				requestSize,
+				/// The result of the SSL certificate verification.
 				sslVerifyResult,
+				// TODO: fileTime only works if the fileTime request option is set
 				fileTime,
+				/// The total number of redirections that were followed.
 				redirectCount,
+				/// The last received HTTP proxy response code to a CONNECT request.
 				httpConnectCode,
+				// TODO: this needs OptionSet enum
 				httpAuthAvail,
+				// TODO: this needs OptionSet enum
 				proxyAuthAvail,
+				/// The OS level errno which may have triggered a failure.
 				osErrno,
+				/// The number of connections that the request had to make in order to produce a response.
 				numConnects,
+				// TODO: requires the matching time condition options
 				conditionUnmet,
+				/// The remote port that the request most recently connected to
 				primaryPort,
+				/// The local port that the request used most recently
 				localPort
 //				httpVersion // not supported on ubuntu 16 curl??
 		}
 		/// Info keys with Double values.
 		public enum DoubleValue {
-			case totalTime,
-			nameLookupTime,
-			connectTime,
-			preTransferTime,
-			sizeUpload,
-			sizeDownload,
-			speedDownload,
-			speedUpload,
-			contentLengthDownload,
-			contentLengthUpload,
-			startTransferTime,
-			redirectTime,
-			appConnectTime 
+			case
+				/// The total time in seconds for the previous request.
+				totalTime,
+				/// The total time in seconds from the start until the name resolving was completed.
+				nameLookupTime,
+				/// The total time in seconds from the start until the connection to the remote host or proxy was completed.
+				connectTime,
+				/// The time, in seconds, it took from the start until the file transfer is just about to begin.
+				preTransferTime,
+				/// The total number of
+				sizeUpload,
+				sizeDownload,
+				speedDownload,
+				speedUpload,
+				contentLengthDownload,
+				contentLengthUpload,
+				startTransferTime,
+				redirectTime,
+				appConnectTime
 		}
 //		cookieList, // SLIST
 //		certInfo // SLIST
@@ -109,6 +132,7 @@ open class CURLResponse {
 	
 	let curl: CURL
 	var headers = Array<(Header.Name, String)>()
+	
 	/// The response's raw content body bytes.
 	public internal(set) var bodyBytes = [UInt8]()
 	

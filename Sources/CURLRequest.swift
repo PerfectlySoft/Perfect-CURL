@@ -53,52 +53,148 @@ open class CURLRequest {
 	}
 	/// The HTTP method to set explicitly.
 	public typealias HTTPMethod = PerfectHTTP.HTTPMethod
+	/// Kerberos security level for FTP requests. Used with `.kbrLevel` option.
+	public enum KBRLevel {
+		case clear, safe, confidential, `private`
+		var description: String {
+			switch self {
+			case .clear: return "clear"
+			case .safe: return "safe"
+			case .confidential: return "confidential"
+			case .private: return "private"
+			}
+		}
+	}
+	/// SSL certificate format. Used with `.sslCertType` option.
+	/// The `.eng` case indicates that the `.sslCertType` value should be passed directly to the crypto engine (usually OpenSSL).
+	public enum SSLFileType {
+		case pem, der, p12, eng
+		var description: String {
+			switch self {
+			case .pem: return "PEM"
+			case .der: return "DER"
+			case .p12: return "P12"
+			case .eng: return "ENG"
+			}
+		}
+	}
+	
 	/// The numerous options which can be set. Each enum case indicates the parameter type(s) for the option.
 	public enum Option {
-		case url(String),
+	case
+		/// The URL for the request.
+		url(String),
+		/// Override the port for the request.
 		port(Int),
-		failOnError, // fail on http error codes >= 400
-		
+		/// Fail on http error codes >= 400.
+		failOnError,
+		/// Colon separated username/password string.
 		userPwd(String),
-		
-		proxy(String), proxyUserPwd(String), proxyPort(Int),
-		
+		/// Proxy server address.
+		proxy(String),
+		/// Proxy server username/password combination.
+		proxyUserPwd(String),
+		/// Port override for the proxy server.
+		proxyPort(Int),
+		/// Maximum time in seconds for the request to complete.
+		/// The default timeout is never.
 		timeout(Int),
+		/// Maximum time in seconds for the request connection phase.
+		/// The default timeout is 300 seconds.
 		connectTimeout(Int),
-		lowSpeedLimit(Int), lowSpeedTime(Int),
-		
+		/// The average transfer speed in bytes per second that the transfer should be below 
+		/// during `.lowSpeedLimit` seconds for the request to be too slow and abort.
+		lowSpeedLimit(Int),
+		/// The time in seconds that the transfer speed should be below the `.lowSpeedLimit` 
+		/// for therequest to be considered too slow and aborted.
+		lowSpeedTime(Int),
+		/// Range request value as a string in the format "X-Y", where either X or Y may be 
+		/// left out and X and Y are byte indexes
 		range(String),
+		/// The offset in bytes at which the request should start form.
 		resumeFrom(Int),
-		
-		cookie(String), cookieFile(String), cookieJar(String),
-		
-		followLocation(Bool), maxRedirects(Int),
-		
+		/// Set one or more cookies for the request. Should be in the format "name=value".
+		/// Separate multiple cookies with a semi-colon: "name1=value1; name2=value2".
+		cookie(String),
+		/// The name of the file holding cookie data for the request.
+		cookieFile(String),
+		/// The name opf the file to which received cookies will be written.
+		cookieJar(String),
+		/// Indicated that the request should follow redirects. Default is false.
+		followLocation(Bool),
+		/// Maximum number of redirects the request should follow. Default is unlimited.
+		maxRedirects(Int),
+		/// Maximum number of simultaneously open persistent connections that may cached for the request.
 		maxConnects(Int),
+		/// When enabled, the request will automatically set the Referer: header field in HTTP 
+		/// requests when it follows a Location: redirect
 		autoReferer(Bool),
-		krbLevel(String),
-		
-		addHeader(Header.Name, String), // add header
-		addHeaders([(Header.Name, String)]), // add headers
-		replaceHeader(Header.Name, String), // add/replace header
+		/// Sets the kerberos security level for FTP.
+		/// Value should be one of the following: .clear, .safe, .confidential or .private.
+		krbLevel(KBRLevel),
+		/// Add a header to the request.
+		addHeader(Header.Name, String),
+		/// Add a series of headers to the request.
+		addHeaders([(Header.Name, String)]),
+		/// Add or replace a header.
+		replaceHeader(Header.Name, String),
+		/// Remove a default internally added header.
 		removeHeader(Header.Name),
-		
-		sslCert(String), sslCertType(String),
-		sslKey(String), sslKeyPwd(String), sslKeyType(String),
+		/// Path to the client SSL certificate.
+		sslCert(String),
+		/// Specifies the type for the client SSL certificate. Defaults to `.pem`.
+		sslCertType(SSLFileType),
+		/// Path to client private key file.
+		sslKey(String),
+		/// Password to be used if the SSL key file is password protected.
+		sslKeyPwd(String),
+		/// Specifies the type for the SSL private key file.
+		sslKeyType(SSLFileType),
+		/// Force the request to use a specific version of TLS or SSL.
 		sslVersion(TLSMethod),
-		sslVerifyPeer(Bool), sslVerifyHost(Bool),
-		sslCAInfo(String), sslCAPath(String),
-		sslCiphers([String]), sslPinnedPublicKey(String),
-		
-		ftpPreCommands([String]), ftpPostCommands([String]),
-		ftpPort(String), ftpResponseTimeout(Int),
-		
-		sshPublicKey(String), sshPrivateKey(String),
-		
+		/// Inticates whether the request should verify the authenticity of the peer's certificate.
+		sslVerifyPeer(Bool),
+		/// Indicates whether the request should verify that the server cert is for the server it is known as.
+		sslVerifyHost(Bool),
+		/// Path to file holding one or more certificates which will be used to verify the peer.
+		sslCAFilePath(String),
+		/// Path to directory holding one or more certificates which will be used to verify the peer.
+		sslCADirPath(String),
+		/// Override the list of ciphers to use for the SSL connection. 
+		/// Consists of one or more cipher strings separated by colons. Commas or spaces are also acceptable 
+		/// separators but colons are normally used. "!", "-" and "+" can be used as operators.
+		sslCiphers([String]),
+		/// File path to the pinned public key.
+		/// When negotiating a TLS or SSL connection, the server sends a certificate indicating its 
+		/// identity. A public key is extracted from this certificate and if it does not exactly 
+		/// match the public key provided to this option, curl will abort the connection before 
+		/// sending or receiving any data.
+		sslPinnedPublicKey(String),
+		/// List of (S)FTP commands to be run before the file transfer.
+		ftpPreCommands([String]),
+		/// List of (S)FTP commands to be run after the file transfer.
+		ftpPostCommands([String]),
+		/// Specifies the local connection port for active FTP transfers.
+		ftpPort(String),
+		/// The time in seconds that the request will wait for FTP server responses.
+		ftpResponseTimeout(Int),
+		/// Path to the public key file used for SSH connections.
+		sshPublicKey(String),
+		/// Path to the private key file used for SSH connections.
+		sshPrivateKey(String),
+		/// HTTP method to be used for the request.
 		httpMethod(HTTPMethod),
-		postField(POSTField), postData([UInt8]), postString(String),
-		
-		mailFrom(String), mailRcpt(String)
+		/// Adds a single POST field to the request. Generally, multiple POSt fields are added for a request.
+		postField(POSTField),
+		/// Raw bytes to be used for a POST request.
+		postData([UInt8]),
+		/// Raw string data to be used for a POST request.
+		postString(String),
+		/// Specifies the sender's address when performing an SMTP request.
+		mailFrom(String),
+		/// Specifies the recipient when performing an SMTP request. 
+		/// Multiple recipients may be specified by using this option multiple times.
+		mailRcpt(String)
 	}
 	
 	let curl: CURL
