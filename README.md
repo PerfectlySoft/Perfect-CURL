@@ -41,9 +41,9 @@
 
 This package provides support for [curl](https://curl.haxx.se) in Swift. This package builds with Swift Package Manager and is part of the [Perfect](https://github.com/PerfectlySoft/Perfect) project.
 
-Ensure you have installed and activated the latest Swift 3.1+ tool chain.
-
 ## Building
+
+Ensure you have installed and activated the latest Swift 3.1+ tool chain.
 
 Add this project as a dependency in your Package.swift file.
 
@@ -60,6 +60,8 @@ sudo apt-get install libcurl4-openssl-dev
 ```
 
 ## Usage
+
+`import PerfectCURL`
 
 This package uses a simple request/response model to access URL contents. Start by creating a `CURLRequest` object and configure it according to your needs, then ask it to perform the request and return a response. Responses are represented by `CURLResponse` objects.
 
@@ -84,7 +86,34 @@ Options can be provided using either `Array<Option>` or variadic parameters. Opt
 
 ### Configuring Requests
 
-`CURLRequest` options are represented by the `CURLRequest.Option` enum. Each enum case will have zero or more associated values which indicate the parameters for the particular option. For example, the URL for the request could be indicated with the option `.url("https://httpbin.org/post")`.
+`CURLRequest` options are represented by the `CURLRequest.Option` enum. Each enum case will have zero or more associated values which indicate the parameters for the particular option. For example, the URL for the request could be indicated with the option `.url("https://httpbin.org/post")`. Most of the options that curl makes available are represented in the `CURLRequest.Option` enum. The full list of available options is presented near the end of this document.
+
+#### POST Data
+
+POST field data, including file uploads, are added to request the same way other options are. The `.postField(POSTField)`, `.postData([UInt8])`, and `.postString(String)` enum cases will set the request's POST content. The `.postField` case can be added to a request multiple times as each instance represents one set of name/value pair. The `.postData` and `.postString` cases should be considered mutually exclusive to other post cases as adding either will overwrite any previously set POST content. Adding POST content data of any sort will automatically set the HTTP method to POST.
+
+The `CURLRequest.POSTField` struct is defined as follows:
+
+```swift
+open class CURLRequest {
+	public struct POSTField {
+		/// Init with a name, value and optional mime-type.
+		public init(name: String, value: String, mimeType: String? = nil)
+		/// Init with a name, file path and optional mime-type.
+		public init(name: String, filePath: String, mimeType: String? = nil)
+	}
+}
+```
+
+The example below creates a POST request and adds several name/value pairs as well as a file. The executed request will automatically have a "multipart/form-data" content type.
+
+```swift
+let json = try CURLRequest(url, .failOnError,
+			               .postField(.init(name: "key1", value: "value1")),
+			               .postField(.init(name: "key2", value: "value2")),
+			               .postField(.init(name: "file1", filePath: testFile.path, mimeType: "text/plain")))
+										.perform().bodyJSON
+```
 
 ### Fetching Responses
 
@@ -155,6 +184,25 @@ The three available functions ranked according to efficiency would be ordered as
 3. Synchronous `perform`
 
 When performing CURL requests on a high-traffic server it is advised that one of the asynchronous response functions be used.
+
+#### Reset Request
+
+A `CURLRequest` object can be reused for subsequent connections by calling the `.reset` function. Resetting a request will clear out any previously set options, including the target URL. The `.reset` function accepts as an optional parameter new options with which the request will be reconfigured.
+
+The reset declaration follows:
+
+```swift
+public extension CURLRequest {
+	/// Reset the request. Clears all options so that the object can be reused.
+	/// New options can be provided.
+	func reset(_ options: [Option] = [])
+	/// Reset the request. Clears all options so that the object can be reused.
+	/// New options can be provided.
+	func reset(_ option: Option, _ options: Option...)
+}
+```
+
+Resetting a request will invalidate any previously executed `CURLResponse` objects. The reconfigured request should be reexecuted to obtain an updated `CURLResponse`.
 
 ### Response Data
 
@@ -233,6 +281,104 @@ open class CURLResponse {
 	}
 }
 ```
+
+### CURLRequest.Option List
+
+The following is a list of the numerous `CURLRequest` options which can be set. Each enum case indicates the parameter types for the option. These enum values can be used when creating a new `CURLRequest` object or by adding them to an existing object's `.options` array property.
+
+|CURLRequest.Option enum case|Description|
+|---|---|
+|.url(String)|The URL for the request.|
+|.port(Int)|Override the port for the request.|
+|.failOnError|Fail on http error codes >= 400.|
+|.userPwd(String)|Colon separated username/password string.|
+|.proxy(String)|Proxy server address.|
+|.proxyUserPwd(String)|Proxy server username/password combination.|
+|.proxyPort(Int)|Port override for the proxy server.|
+|.timeout(Int)|Maximum time in seconds for the request to complete. The default timeout is never.|
+|.connectTimeout(Int)|Maximum time in seconds for the request connection phase. The default timeout is 300 seconds.|
+|.lowSpeedLimit(Int)|The average transfer speed in bytes per second that the transfer should be below during `.lowSpeedLimit` seconds for the request to be too slow and abort.|
+|.lowSpeedTime(Int)|The time in seconds that the transfer speed should be below the `.lowSpeedLimit` for therequest to be considered too slow and aborted.|
+|.range(String)|Range request value as a string in the format "X-Y", where either X or Y may be left out and X and Y are byte indexes|
+|.resumeFrom(Int)|The offset in bytes at which the request should start form.|
+|.cookie(String)|Set one or more cookies for the request. Should be in the format "name=value". Separate multiple cookies with a semi-colon: "name1=value1; name2=value2".|
+|.cookieFile(String)|The name of the file holding cookie data for the request.|
+|.cookieJar(String)|The name opf the file to which received cookies will be written.|
+|.followLocation(Bool)|Indicated that the request should follow redirects. Default is false.|
+|.maxRedirects(Int)|Maximum number of redirects the request should follow. Default is unlimited.|
+|.maxConnects(Int)|Maximum number of simultaneously open persistent connections that may cached for the request.|
+|.autoReferer(Bool)|When enabled, the request will automatically set the Referer: header field in HTTP requests when it follows a Location: redirect|
+|.krbLevel(KBRLevel)|Sets the kerberos security level for FTP. Value should be one of the following: .clear, .safe, .confidential or .private.|
+|.addHeader(Header.Name, String)|Add a header to the request.|
+|.addHeaders([(Header.Name, String)])|Add a series of headers to the request.|
+|.replaceHeader(Header.Name, String)|Add or replace a header.|
+|.removeHeader(Header.Name)|Remove a default internally added header.|
+|.sslCert(String)|Path to the client SSL certificate.|
+|.sslCertType(SSLFileType)|Specifies the type for the client SSL certificate. Defaults to `.pem`.|
+|.sslKey(String)|Path to client private key file.|
+|.sslKeyPwd(String)|Password to be used if the SSL key file is password protected.|
+|.sslKeyType(SSLFileType)|Specifies the type for the SSL private key file.|
+|.sslVersion(TLSMethod)|Force the request to use a specific version of TLS or SSL.|
+|.sslVerifyPeer(Bool)|Inticates whether the request should verify the authenticity of the peer's certificate.|
+|.sslVerifyHost(Bool)|Indicates whether the request should verify that the server cert is for the server it is known as.|
+|.sslCAFilePath(String)|Path to file holding one or more certificates which will be used to verify the peer.|
+|.sslCADirPath(String)|Path to directory holding one or more certificates which will be used to verify the peer.|
+|.sslCiphers([String])|Override the list of ciphers to use for the SSL connection. Consists of one or more cipher strings separated by colons. Commas or spaces are also acceptable separators but colons are normally used. "!", "-" and "+" can be used as operators.|
+|.sslPinnedPublicKey(String)|File path to the pinned public key. When negotiating a TLS or SSL connection, the server sends a certificate indicating its identity. A public key is extracted from this certificate and if it does not exactly match the public key provided to this option, curl will abort the connection before sending or receiving any data.|
+|.ftpPreCommands([String])|List of (S)FTP commands to be run before the file transfer.|
+|.ftpPostCommands([String])|List of (S)FTP commands to be run after the file transfer.|
+|.ftpPort(String)|Specifies the local connection port for active FTP transfers.|
+|.ftpResponseTimeout(Int)|The time in seconds that the request will wait for FTP server responses.|
+|.sshPublicKey(String)|Path to the public key file used for SSH connections.|
+|.sshPrivateKey(String)|Path to the private key file used for SSH connections.|
+|.httpMethod(HTTPMethod)|HTTP method to be used for the request.|
+|.postField(POSTField)|Adds a single POST field to the request. Generally, multiple POSt fields are added for a request.|
+|.postData([UInt8])|Raw bytes to be used for a POST request.|
+|.postString(String)|Raw string data to be used for a POST request.|
+|.mailFrom(String)|Specifies the sender's address when performing an SMTP request.|
+|.mailRcpt(String)|Specifies the recipient when performing an SMTP request. Multiple recipients may be specified by using this option multiple times.|
+
+### CURLResponse.Info List
+
+The lists which follow describe the `CURLResponse.Info` cases which are used with the `CURLResponse.get` function to retrieve response information. The lists are grouped according to the type of data which would be returned; `StringValue`, `IntValue`, and `DoubleValue`, respectively. 
+
+|CURLResponse.Info.StringValue enum case|Description|
+|---|---|
+|.url|The effective URL for the request/response. This is ultimately the URL from which the response data came from. This may differ from the request's URL in the case of a redirect.|
+|.ftpEntryPath|The initial path that the request ended up at after logging in to the FTP server.|
+|.redirectURL|The URL that the request *would have* been redirected to.|
+|.localIP|The local IP address that the request used most recently.|
+|.primaryIP|The remote IP address that the request most recently connected to.|
+|.contentType|The content type for the request. This is read from the "Content-Type" header.|
+
+|CURLResponse.Info.IntValue enum case|Description|
+|---|---|
+|.responseCode|The last received HTTP, FTP or SMTP response code.|
+|.headerSize|The total size in bytes of all received headers.|
+|.requestSize|The total size of the issued request in bytes. This will indicate the cumulative total of all requests sent in the case of a redirect.|
+|.sslVerifyResult|The result of the SSL certificate verification.|
+|.redirectCount|The total number of redirections that were followed.|
+|.httpConnectCode|The last received HTTP proxy response code to a CONNECT request.|
+|.osErrno|The OS level errno which may have triggered a failure.|
+|.numConnects|The number of connections that the request had to make in order to produce a response.|
+|.primaryPort|The remote port that the request most recently connected to|
+|.localPort|The local port that the request used most recently|
+
+|CURLResponse.Info.DoubleValue enum case|Description|
+|---|---|
+|.totalTime|The total time in seconds for the previous request.|
+|.nameLookupTime|The total time in seconds from the start until the name resolving was completed.|
+|.connectTime|The total time in seconds from the start until the connection to the remote host or proxy was completed.|
+|.preTransferTime|The time, in seconds, it took from the start until the file transfer is just about to begin.|
+|.sizeUpload|The total number of bytes uploaded.|
+|.sizeDownload|The total number of bytes downloaded.|
+|.speedDownload|The average download speed measured in bytes/second.|
+|.speedUpload|The average upload speed measured in bytes/second.|
+|.contentLengthDownload|The content-length of the download. This value is obtained from the Content-Length header field.|
+|.contentLengthUpload|The specified size of the upload.|
+|.startTransferTime|The time, in seconds, it took from the start of the request until the first byte was received.|
+|.redirectTime|The total time, in seconds, it took for all redirection steps include name lookup, connect, pretransfer and transfer before final transaction was started.|
+|.appConnectTime|The time, in seconds, it took from the start until the SSL/SSH connect/handshake to the remote host was completed.|
 
 ## Reporting Issues
 

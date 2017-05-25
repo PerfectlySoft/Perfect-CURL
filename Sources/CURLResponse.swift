@@ -115,15 +115,23 @@ open class CURLResponse {
 				connectTime,
 				/// The time, in seconds, it took from the start until the file transfer is just about to begin.
 				preTransferTime,
-				/// The total number of
-				sizeUpload,
-				sizeDownload,
+				/// The total number of bytes uploaded.
+				sizeUpload, // TODO: why is this a double? curl has it as a double
+				/// The total number of bytes downloaded.
+				sizeDownload, // TODO: why is this a double? curl has it as a double
+				/// The average download speed measured in bytes/second.
 				speedDownload,
+				/// The average upload speed measured in bytes/second.
 				speedUpload,
+				/// The content-length of the download. This value is obtained from the Content-Length header field.
 				contentLengthDownload,
+				/// The specified size of the upload.
 				contentLengthUpload,
+				/// The time, in seconds, it took from the start of the request until the first byte was received.
 				startTransferTime,
+				/// The total time, in seconds, it took for all redirection steps include name lookup, connect, pretransfer and transfer before final transaction was started.
 				redirectTime,
+				/// The time, in seconds, it took from the start until the SSL/SSH connect/handshake to the remote host was completed.
 				appConnectTime
 		}
 //		cookieList, // SLIST
