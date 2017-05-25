@@ -23,146 +23,195 @@ import cURL
 #if os(Linux)
 	import LinuxBridge
 #endif
+import PerfectLib
 
 class PerfectCURLTests: XCTestCase {
-
-	func testCURL() {
-		let url = "https://www.treefrog.ca"
-		let curl = CURL(url: url)
-
-		let _ = curl.setOption(CURLOPT_SSL_VERIFYPEER, int: 0)
-
-		XCTAssert(curl.url == url)
-
-		var header = [UInt8]()
-		var body = [UInt8]()
-
-		var perf = curl.perform()
-		while perf.0 {
-			if let h = perf.2 {
-				header.append(contentsOf: h)
-			}
-			if let b = perf.3 {
-				body.append(contentsOf: b)
-			}
-			perf = curl.perform()
+	
+	let headersTestURL = "https://httpbin.org/headers"
+	let postTestURL = "https://httpbin.org/post"
+	let errorTestURL = "https://httpbin.org/status/500"
+	
+	func testCURLError() {
+		let url = errorTestURL
+		let request = CURLRequest(url, .failOnError)
+		do {
+			_ = try request.perform()
+			XCTAssert(false, "500 response did not fail.")
+		} catch let error as CURLResponse.Error {
+			XCTAssertEqual(error.response.responseCode, 500)
+		} catch {
+			XCTAssert(false, "\(error)")
 		}
-		if let h = perf.2 {
-			header.append(contentsOf: h)
+	}
+	
+	func testCURLSync() {
+		let url = headersTestURL
+		let request = CURLRequest(url, .failOnError)
+		do {
+			let response = try request.perform()
+			let responseCode = response.responseCode
+			XCTAssertEqual(responseCode, 200)
+			XCTAssertEqual(response.url, url)
+			XCTAssertEqual(response.get(.connection), "keep-alive")
+			XCTAssertGreaterThan(response.get(.totalTime) ?? 0.0, 0.0)
+			XCTAssertGreaterThan(response.headers.count, 0)
+			XCTAssertGreaterThan(response.bodyBytes.count, 0)
+		} catch {
+			XCTAssert(false, "\(error)")
 		}
-		if let b = perf.3 {
-			body.append(contentsOf: b)
+		
+		request.reset(.url(headersTestURL))
+		
+		do {
+			let response = try request.perform()
+			let responseCode = response.responseCode
+			XCTAssertEqual(responseCode, 200)
+			XCTAssertEqual(response.url, url)
+			XCTAssertGreaterThan(response.headers.count, 0)
+			XCTAssertGreaterThan(response.bodyBytes.count, 0)
+		} catch {
+			XCTAssert(false, "\(error)")
 		}
-		let perf1 = perf.1
-		XCTAssert(perf1 == 0, "\(perf)")
-
-		let response = curl.responseCode
-		XCTAssert(response == 200, "\(response)")
-
-		XCTAssert(header.count > 0)
-		XCTAssert(body.count > 0)
 	}
 
 	func testCURLAsync() {
-		let url = "https://www.treefrog.ca"
-		let curl = CURL(url: url)
-
-		let _ = curl.setOption(CURLOPT_SSL_VERIFYPEER, int: 0)
-
-		XCTAssert(curl.url == url)
-
 		let clientExpectation = self.expectation(description: "client")
-
-		curl.perform {
-			code, header, body in
-
-			XCTAssert(0 == code, "Request error code \(code)")
-
-			let response = curl.responseCode
-			XCTAssert(response == 200, "\(response)")
-			XCTAssert(header.count > 0)
-			XCTAssert(body.count > 0)
-
+		let url = headersTestURL
+		
+		CURLRequest(url, .failOnError).perform {
+			confirmation in
+			do {
+				let response = try confirmation()
+				XCTAssertEqual(response.responseCode, 200)
+				XCTAssertGreaterThan(response.headers.count, 0)
+				XCTAssertGreaterThan(response.bodyBytes.count, 0)
+			} catch {
+				XCTAssert(false, "\(error)")
+			}
 			clientExpectation.fulfill()
-			curl.close()
 		}
-
-		self.waitForExpectations(timeout: 10000) {
-			_ in
-
+		self.waitForExpectations(timeout: 10000)
+	}
+	
+	func testCURLPromise() {
+		let url = headersTestURL
+		
+		do {
+			let responseCode = try CURLRequest(url, .failOnError).promise().then {
+					return try $0().responseCode
+				}.wait()
+			XCTAssertNotNil(responseCode)
+			XCTAssertEqual(responseCode ?? 0, 200)
+		} catch {
+			XCTAssert(false, "\(error)")
 		}
 	}
 
 	func testCURLHeader() {
-		let url = "https://httpbin.org/headers"
-		let header = [("Accept", "application/json"), ("X-Extra", "value123")]
-
-		let curl = CURL(url: url)
-        for (n, v) in header {
-            let code = curl.setOption(CURLOPT_HTTPHEADER, s: "\(n): \(v)" )
-            XCTAssert(code == CURLE_OK)
-        }
-		let response = curl.performFullySync()
-		XCTAssert(response.0 == 0)
-
-//		let body = UTF8Encoding.encode(bytes: response.2)
-//		do {
-//			guard
-//				let jsonMap = try body.jsonDecode() as? [String: Any],
-//				let headers = jsonMap["headers"] as? [String: Any],
-//				let accept = headers[header.0] as? String
-//				else {
-//					XCTAssert(false)
-//					return
-//			}
-//				XCTAssertEqual(accept, header.1)
-//		} catch let e {
-//			XCTAssert(false, "Exception: \(e)")
-//		}
-	}
-    
-    func testPerformFullySync() {
-        let curl = CURL(url: "https://httpbin.org/get")
-
-        let response = curl.performFullySync()
-        XCTAssert(response.resultCode == 0)
-        XCTAssertEqual(response.responseCode, 200)
-        XCTAssert(response.headerBytes.count > 0)
-        XCTAssert(response.bodyBytes.count > 0)
-    }
-
-	func testCURLPost() {
-		let url = "https://httpbin.org/post"
-		let postParamString = "key1=value1&key2=value2"
-		let byteArray = [UInt8](postParamString.utf8)
-
+		let url = headersTestURL
+		let accept = CURLRequest.Header.Name.accept
+		let custom = CURLRequest.Header.Name.custom(name: "X-Extra")
+		let custom2 = CURLRequest.Header.Name.custom(name: "X-Extra-2")
+		let customValueFalse = "notValue123"
+		let customValue = "value123"
+		
+		let request = CURLRequest(url, .failOnError,
+		                          .addHeader(custom, customValueFalse),
+		                          .addHeader(custom2, ""),
+		                          .removeHeader(accept),
+		                          .replaceHeader(custom, customValue))
+		                          
 		do {
-
-			let curl = CURL(url: url)
-
-			let _ = curl.setOption(CURLOPT_POST, int: 1)
-			let _ = curl.setOption(CURLOPT_POSTFIELDS, v: UnsafeMutableRawPointer(mutating: byteArray))
-			let _ = curl.setOption(CURLOPT_POSTFIELDSIZE, int: byteArray.count)
-
-			let response = curl.performFullySync()
-			XCTAssert(response.0 == 0)
-
-//			let body = UTF8Encoding.encode(bytes: response.2)
-//			do {
-//				guard
-//					let jsonMap = try body.jsonDecode() as? [String: Any],
-//					let form = jsonMap["form"] as? [String: Any],
-//					let value1 = form["key1"] as? String,
-//					let value2 = form["key2"] as? String
-//					else {
-//						XCTAssert(false)
-//						return
-//				}
-//				XCTAssertEqual(value1, "value1")
-//				XCTAssertEqual(value2, "value2")
-//			} catch let e {
-//				XCTAssert(false, "Exception: \(e)")
-//			}
+			let response = try request.perform()
+			let json = response.bodyJSON
+			guard let headers = json["headers"] as? [String:Any],
+					let resCustom = headers[custom.standardName] as? String,
+					let resCustom2 = headers[custom2.standardName] as? String else {
+				return XCTAssert(false, "\(custom.standardName) not found in \(json)")
+			}
+			XCTAssertNil(headers[accept.standardName])
+			XCTAssertEqual(customValue, resCustom)
+			XCTAssertEqual("", resCustom2)
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
+	
+	func testCURLHeader2() {
+		let url = headersTestURL
+		let accept = CURLRequest.Header.Name.accept
+		let custom = CURLRequest.Header.Name.custom(name: "X-Extra")
+		let customValueFalse = "notValue123"
+		let customValue = "value123"
+		
+		let request = CURLRequest(url, .failOnError)
+		request.addHeader(custom, value: customValueFalse)
+		request.removeHeader(accept)
+		request.replaceHeader(custom, value: customValue)
+		
+		do {
+			let response = try request.perform()
+			let json = response.bodyJSON
+			guard let headers = json["headers"] as? [String:Any],
+				let resCustom = headers[custom.standardName] as? String else {
+					return XCTAssert(false, "\(accept.standardName) or \(custom.standardName) not found in \(json)")
+			}
+			XCTAssertNil(headers[accept.standardName])
+			XCTAssertEqual(customValue, resCustom)
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
+	
+	func testCURLPostString() {
+		let url = postTestURL
+		let postParamString = "key1=value1&key2=value2"
+		
+		do {
+			let json = try CURLRequest(url, .postString(postParamString), .failOnError).perform().bodyJSON
+			guard let form = json["form"] as? [String:Any],
+				let key1 = form["key1"] as? String,
+				let key2 = form["key2"] as? String else {
+					return XCTAssert(false, "key1 or key2 not found in \(json)")
+			}
+			XCTAssertEqual(key1, "value1")
+			XCTAssertEqual(key2, "value2")
+			return
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
+	
+	func testCURLPostFields() {
+		let url = postTestURL
+		let testFileContents = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		do {
+			let testFile = TemporaryFile(withPrefix: "test")
+			try testFile.open(.truncate)
+			defer { testFile.delete() }
+			try testFile.write(string: testFileContents)
+			testFile.close()
+			let json = try CURLRequest(url, .failOnError,
+			                           .postField(.init(name: "key1", value: "value1")),
+			                           .postField(.init(name: "key2", value: "value2")),
+			                           .postField(.init(name: "file1", filePath: testFile.path, mimeType: "text/plain")))
+											.perform().bodyJSON
+			guard let form = json["form"] as? [String:Any],
+				let key1 = form["key1"] as? String,
+				let key2 = form["key2"] as? String else {
+					return XCTAssert(false, "key1 or key2 not found in \(json)")
+			}
+			
+			XCTAssertEqual(key1, "value1")
+			XCTAssertEqual(key2, "value2")
+			
+			guard let files = json["files"] as? [String:Any],
+				let file1 = files["file1"] as? String else {
+					return XCTAssert(false, "files or file1 not found in \(json)")
+			}
+			XCTAssertEqual(file1, testFileContents)
+		} catch {
+			XCTAssert(false, "\(error)")
 		}
 	}
 
@@ -206,63 +255,15 @@ class PerfectCURLTests: XCTestCase {
 //    fclose(fi)
 //    XCTAssertEqual(r.0, 0)
 //  }
-
-//  func testFORMPost () {
-//    let fields = CURL.POSTFields()
-//    let testStr = "varStringValue🇨🇳🇨🇦"
-//    var r = fields.append(key: "varString", value: testStr)
-//    guard r.rawValue == 0 else {
-//      XCTFail("post form appending string field: \(r.rawValue)")
-//      return
-//    }
-//    let buf: [Int8] = [1, 2, 3, 4, 5, 6, 7, 8]
-//    r = fields.append(key: "varBuffer", buffer: buf)
-//    guard r.rawValue == 0 else {
-//      XCTFail("post form appending buffer field: \(r.rawValue)")
-//      return
-//    }
-//    let testFile = "variable file content 🇨🇳 🇨🇦\n\0"
-//    let path = "/tmp/postfile.txt"
-//    let f = fopen(path, "wb")
-//    fwrite(testFile, 1, testFile.utf8.count, f)
-//    fclose(f)
-//
-//    r = fields.append(key: "varFile", path: path)
-//    guard r.rawValue == 0 else {
-//      XCTFail("post form appending file field: \(r.rawValue)")
-//      return
-//    }
-//
-//    let curl = CURL(url: "http://apa.perfect.org/hello.cgi")
-//    let ret = curl.formAddPost(fields: fields)
-//    guard ret.rawValue == 0 else {
-//      let str = curl.strError(code: ret)
-//      XCTFail("posting form: \(str)")
-//      return
-//    }//end guard
-//
-//    //let _ = curl.setOption(CURLOPT_VERBOSE, int: 1)
-//
-//    let exec = curl.performFullySync()
-//    XCTAssertEqual(exec.0, 0)
-//    XCTAssertEqual(exec.1, 200)
-//    XCTAssertNotNil(strstr(String(cString:exec.2), "100 Continue"))
-//    let content = String(cString:exec.3)
-//    XCTAssertNotNil(strstr(content, testStr))
-//    XCTAssertNotNil(strstr(content, testFile))
-//    print(content)
-//    curl.close()
-//  }
 	
 	static var allTests : [(String, (PerfectCURLTests) -> () throws -> Void)] {
 		return [
-			("testCURLPost", testCURLPost),
-			("testCURLHeader", testCURLHeader),
-			("testPerformFullySync", testPerformFullySync),
+			("testCURLSync", testCURLSync),
 			("testCURLAsync", testCURLAsync),
-//			("testSMTP", testSMTP),
-//			("testFORMPost", testFORMPost),
-			("testCURL", testCURL)
+			("testCURLHeader", testCURLHeader),
+			("testCURLHeader2", testCURLHeader2),
+			("testCURLPostString", testCURLPostString),
+			("testCURLPostFields", testCURLPostFields)
 		]
 	}
 }
