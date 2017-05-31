@@ -99,8 +99,6 @@ extension CURLRequest.Option {
 			case .tlsV1: value = CURL_SSLVERSION_TLSv1
 			case .tlsV1_1: value = CURL_SSLVERSION_TLSv1_1
 			case .tlsV1_2: value = CURL_SSLVERSION_TLSv1_2
-			case .sslV23: value = CURL_SSLVERSION_SSLv2
-			case .sslV3: value = CURL_SSLVERSION_SSLv3
 			}
 			curl.setOption(CURLOPT_SSLVERSION, int: value)
 		case .sslVerifyPeer(let optBool):
