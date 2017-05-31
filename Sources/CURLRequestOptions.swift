@@ -150,9 +150,12 @@ extension CURLRequest.Option {
 				_ = request.postFields?.append(key: optPOSTField.name, path: optPOSTField.value, mimeType: optPOSTField.mimeType ?? "")
 			}
 		case .postData(let optBytes):
+			curl.setOption(CURLOPT_POSTFIELDSIZE_LARGE, int: optBytes.count)
 			curl.setOption(CURLOPT_COPYPOSTFIELDS, v: optBytes)
 		case .postString(let optString):
-			curl.setOption(CURLOPT_COPYPOSTFIELDS, s: optString)
+			let bytes = Array(optString.utf8)
+			curl.setOption(CURLOPT_POSTFIELDSIZE_LARGE, int: bytes.count)
+			curl.setOption(CURLOPT_COPYPOSTFIELDS, v: bytes)
 		case .mailFrom(let optString):
 			curl.setOption(CURLOPT_MAIL_FROM, s: optString)
 		case .mailRcpt(let optString):

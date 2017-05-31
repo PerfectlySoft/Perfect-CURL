@@ -182,6 +182,25 @@ class PerfectCURLTests: XCTestCase {
 		}
 	}
 	
+	func testCURLPostData() {
+		let url = postTestURL
+		let postParamString = "key1=value1&key2=value2"
+		
+		do {
+			let json = try CURLRequest(url, .postData(Array(postParamString.utf8)), .failOnError).perform().bodyJSON
+			guard let form = json["form"] as? [String:Any],
+				let key1 = form["key1"] as? String,
+				let key2 = form["key2"] as? String else {
+					return XCTAssert(false, "key1 or key2 not found in \(json)")
+			}
+			XCTAssertEqual(key1, "value1")
+			XCTAssertEqual(key2, "value2")
+			return
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
+	
 	func testCURLPostFields() {
 		let url = postTestURL
 		let testFileContents = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -192,8 +211,8 @@ class PerfectCURLTests: XCTestCase {
 			try testFile.write(string: testFileContents)
 			testFile.close()
 			let json = try CURLRequest(url, .failOnError,
-			                           .postField(.init(name: "key1", value: "value1")),
-			                           .postField(.init(name: "key2", value: "value2")),
+			                           .postField(.init(name: "key1", value: "value 1")),
+			                           .postField(.init(name: "key2", value: "value 2")),
 			                           .postField(.init(name: "file1", filePath: testFile.path, mimeType: "text/plain")))
 											.perform().bodyJSON
 			guard let form = json["form"] as? [String:Any],
@@ -202,8 +221,8 @@ class PerfectCURLTests: XCTestCase {
 					return XCTAssert(false, "key1 or key2 not found in \(json)")
 			}
 			
-			XCTAssertEqual(key1, "value1")
-			XCTAssertEqual(key2, "value2")
+			XCTAssertEqual(key1, "value 1")
+			XCTAssertEqual(key2, "value 2")
 			
 			guard let files = json["files"] as? [String:Any],
 				let file1 = files["file1"] as? String else {
