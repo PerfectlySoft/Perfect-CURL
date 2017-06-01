@@ -145,9 +145,13 @@ open class CURLResponse {
 	public internal(set) var bodyBytes = [UInt8]()
 	
 	var readState = ResponseReadState.status
+	// these need to persist until the request has completed execution.
+	// this is set by the CURLRequest
+	var postFields: CURLRequest.POSTFields?
 	
-	init(_ curl: CURL) {
+	init(_ curl: CURL, postFields: CURLRequest.POSTFields?) {
 		self.curl = curl
+		self.postFields = postFields
 	}
 }
 
@@ -179,6 +183,7 @@ extension CURLResponse {
 		setCURLOpts()
 		curl.addSLists()
 		let resultCode = curl_easy_perform(curl.curl)
+		postFields = nil
 		guard CURLE_OK == resultCode else {
 			throw Error(self, code: resultCode)
 		}
@@ -192,6 +197,7 @@ extension CURLResponse {
 	private func innerComplete(_ callback: @escaping (Confirmation) -> ()) {
 		let (notDone, resultCode, _, _) = curl.perform()
 		guard Int(CURLE_OK.rawValue) == resultCode else {
+			postFields = nil
 			return callback({ throw Error(self, code: CURLcode(rawValue: UInt32(resultCode))) })
 		}
 		if notDone {
@@ -199,6 +205,7 @@ extension CURLResponse {
 				self.innerComplete(callback)
 			}
 		} else {
+			postFields = nil
 			callback({ return self })
 		}
 	}

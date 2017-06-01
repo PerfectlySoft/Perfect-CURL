@@ -246,6 +246,34 @@ class PerfectCURLTests: XCTestCase {
 			XCTAssert(false, "\(error)")
 		}
 	}
+	
+	func testCURLPostFields2() {
+		let url = postTestURL
+		let clientExpectation = self.expectation(description: "client")
+		let formData = ["key1":"value 1", "key2":"value 2"]
+		let options = formData.map { CURLRequest.Option.postField(.init(name: $0, value: $1)) }
+		
+		CURLRequest(url, options: options).perform {
+			confirmation in
+			do {
+				let response = try confirmation()
+				XCTAssertEqual(response.responseCode, 200)
+				let json = response.bodyJSON
+				guard let form = json["form"] as? [String:Any],
+					let key1 = form["key1"] as? String,
+					let key2 = form["key2"] as? String else {
+						return XCTAssert(false, "key1 or key2 not found in \(json)")
+				}
+				
+				XCTAssertEqual(key1, "value 1")
+				XCTAssertEqual(key2, "value 2")
+			} catch {
+				XCTAssert(false, "\(error)")
+			}
+			clientExpectation.fulfill()
+		}
+		self.waitForExpectations(timeout: 10000)
+	}
 
 //  func testSMTP () {
 //    var timestamp = time(nil)

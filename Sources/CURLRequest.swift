@@ -228,7 +228,7 @@ public extension CURLRequest {
 	/// Returns the response or throws an Error.
 	func perform() throws -> CURLResponse {
 		applyOptions()
-		let resp = CURLResponse(curl)
+		let resp = CURLResponse(curl, postFields: self.postFields)
 		try resp.complete()
 		return resp
 	}
@@ -237,7 +237,7 @@ public extension CURLRequest {
 	/// The parameter passed to the completion callback must be called to obtain the response or throw an Error.
 	func perform(_ completion: @escaping (CURLResponse.Confirmation) -> ()) {
 		applyOptions()
-		CURLResponse(curl).complete(completion)
+		CURLResponse(curl, postFields: self.postFields).complete(completion)
 	}
 	
 	/// Execute the request asynchronously. 
