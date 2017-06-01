@@ -201,6 +201,19 @@ class PerfectCURLTests: XCTestCase {
 		}
 	}
 	
+	func testGithubBadResponse() {
+		do {
+			// github error responses, at least the 403, is malformed
+			// this test ensures that even with a bad response the header parsing is correct
+			let url = "https://api.github.com/orgs/perfectlysoft/repos"
+			let response = try CURLRequest(url).perform()
+			XCTAssert(response.responseCode == 403) // no user-agent caused this request to fail
+			XCTAssertEqual(response.get(.connection), "close")
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
+	
 	func testCURLPostFields() {
 		let url = postTestURL
 		let testFileContents = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -219,7 +219,7 @@ extension CURLResponse {
 				defer {	pos += 1 }
 				if ptr[pos] == colon {
 					tstNamePtr = UnsafeBufferPointer(start: ptr.baseAddress, count: pos)
-					if ptr[pos+1] == space {
+					while pos < max && ptr[pos+1] == space {
 						pos += 1
 					}
 					break
@@ -228,8 +228,14 @@ extension CURLResponse {
 			guard let namePtr = tstNamePtr, let base = ptr.baseAddress else {
 				return
 			}
-			
-			let valuePtr = UnsafeBufferPointer(start: base+pos, count: max-pos)			
+			let valueStart = base+pos
+			if valueStart[max-pos-1] == 10 {
+				pos += 1
+			}
+			if valueStart[max-pos-1] == 13 {
+				pos += 1
+			}
+			let valuePtr = UnsafeBufferPointer(start: valueStart, count: max-pos)
 			let name = UTF8Encoding.encode(generator: namePtr.makeIterator())
 			let value = UTF8Encoding.encode(generator: valuePtr.makeIterator())
 			headers.append((Header.Name.fromStandard(name: name), value))
@@ -251,7 +257,9 @@ extension CURLResponse {
 				let crl = Unmanaged<CURLResponse>.fromOpaque(p!).takeUnretainedValue()
 				if let bytes = a?.assumingMemoryBound(to: UInt8.self) {
 					let fullCount = size*num
-					crl.addHeaderLine(UnsafeBufferPointer(start: bytes, count: fullCount-2))
+					let minimumHeaderLengthEvenAMalformedOne = 3
+					crl.addHeaderLine(UnsafeBufferPointer(start: bytes,
+					                                      count: fullCount >= minimumHeaderLengthEvenAMalformedOne ? fullCount : 0))
 					return fullCount
 				}
 				return 0
