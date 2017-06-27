@@ -131,6 +131,7 @@ extension CURLRequest.Option {
 			case .post: curl.setOption(CURLOPT_POST, int: 1)
 			case .put: curl.setOption(CURLOPT_PUT, int: 1)
 			case .head: curl.setOption(CURLOPT_NOBODY, int: 1)
+			case .patch: curl.setOption(CURLOPT_POST, s: "PATCH")
 			case .delete,
 			     .trace,
 			     .options,

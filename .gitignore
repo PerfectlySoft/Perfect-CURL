@@ -65,3 +65,4 @@ fastlane/screenshots
 Packages/
 PerfectCURL.xcodeproj/
 .DS_Store
+Package.pins
