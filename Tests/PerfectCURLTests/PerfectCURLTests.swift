@@ -29,6 +29,7 @@ class PerfectCURLTests: XCTestCase {
 	
 	let headersTestURL = "https://httpbin.org/headers"
 	let postTestURL = "https://httpbin.org/post"
+	let putTestURL = "https://httpbin.org/put"
 	let errorTestURL = "https://httpbin.org/status/500"
 	
 	func testCURLError() {
@@ -195,6 +196,42 @@ class PerfectCURLTests: XCTestCase {
 			}
 			XCTAssertEqual(key1, "value1")
 			XCTAssertEqual(key2, "value2")
+			return
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
+	
+	func testCURLPutData() {
+		let url = putTestURL
+		let postParamString = "key1=value1&key2=value2"
+		
+		do {
+			let response = try CURLRequest(url, .httpMethod(.put), .postData(Array(postParamString.utf8))).perform()
+			let json = response.bodyJSON
+			guard let form = json["form"] as? [String:Any],
+				let key1 = form["key1"] as? String,
+				let key2 = form["key2"] as? String else {
+					return XCTAssert(false, "key1 or key2 not found in \(json)")
+			}
+			XCTAssertEqual(key1, "value1")
+			XCTAssertEqual(key2, "value2")
+			return
+		} catch {
+			XCTAssert(false, "\(error)")
+		}
+	}
+	
+	func testCURLHead() {
+		let url = headersTestURL
+		let postParamString = "key1=value1&key2=value2"
+		
+		do {
+			let response = try CURLRequest(url, .httpMethod(.head), .postData(Array(postParamString.utf8))).perform()
+			let json = response.bodyJSON
+			let code = response.responseCode
+			XCTAssertEqual(code, 200)
+			XCTAssertEqual(json.count, 0)
 			return
 		} catch {
 			XCTAssert(false, "\(error)")

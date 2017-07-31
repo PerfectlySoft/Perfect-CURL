@@ -129,14 +129,14 @@ extension CURLRequest.Option {
 			switch optHTTPMethod {
 			case .get: curl.setOption(CURLOPT_HTTPGET, int: 1)
 			case .post: curl.setOption(CURLOPT_POST, int: 1)
-			case .put: curl.setOption(CURLOPT_PUT, int: 1)
 			case .head: curl.setOption(CURLOPT_NOBODY, int: 1)
-			case .patch: curl.setOption(CURLOPT_POST, s: "PATCH")
+			case .patch: curl.setOption(CURLOPT_CUSTOMREQUEST, s: "PATCH")
 			case .delete,
+			     .put,
 			     .trace,
 			     .options,
 			     .connect,
-			     .custom(_): curl.setOption(CURLOPT_POST, s: optHTTPMethod.description)
+			     .custom(_): curl.setOption(CURLOPT_CUSTOMREQUEST, s: optHTTPMethod.description)
 			}
 		case .postField(let optPOSTField):
 			if nil == request.postFields {
