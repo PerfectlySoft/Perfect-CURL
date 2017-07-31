@@ -289,7 +289,6 @@ class PerfectCURLTests: XCTestCase {
 		let clientExpectation = self.expectation(description: "client")
 		let formData = ["key1":"value 1", "key2":"value 2"]
 		let options = formData.map { CURLRequest.Option.postField(.init(name: $0, value: $1)) }
-		
 		CURLRequest(url, options: options).perform {
 			confirmation in
 			do {
@@ -299,9 +298,9 @@ class PerfectCURLTests: XCTestCase {
 				guard let form = json["form"] as? [String:Any],
 					let key1 = form["key1"] as? String,
 					let key2 = form["key2"] as? String else {
+						defer { clientExpectation.fulfill() }
 						return XCTAssert(false, "key1 or key2 not found in \(json)")
 				}
-				
 				XCTAssertEqual(key1, "value 1")
 				XCTAssertEqual(key2, "value 2")
 			} catch {
@@ -355,12 +354,19 @@ class PerfectCURLTests: XCTestCase {
 	
 	static var allTests : [(String, (PerfectCURLTests) -> () throws -> Void)] {
 		return [
+			("testCURLError", testCURLError),
 			("testCURLSync", testCURLSync),
 			("testCURLAsync", testCURLAsync),
+			("testCURLPromise", testCURLPromise),
 			("testCURLHeader", testCURLHeader),
 			("testCURLHeader2", testCURLHeader2),
 			("testCURLPostString", testCURLPostString),
-			("testCURLPostFields", testCURLPostFields)
+			("testCURLPostData", testCURLPostData),
+			("testCURLPostFields", testCURLPostFields),
+			("testCURLPostFields2", testCURLPostFields2),
+			("testGithubBadResponse", testGithubBadResponse),
+			("testCURLHead", testCURLHead),
+			("testCURLPutData", testCURLPutData)
 		]
 	}
 }
