@@ -186,32 +186,6 @@ class PerfectCURLTests: XCTestCase {
 		}
 	}
 	
-//	func testCURLPostString2() {
-//		let url = "http://www.badthing.org/env"
-//		let postParamString = "{\"key1\":\"value1\", \"key2\":\"value2\"}"
-//		
-//		do {
-//			let start = Date()
-//			let json = try CURLRequest(url,
-//			                           .httpMethod(.post),
-//			                           .addHeader(.contentType, "application/json"),
-//			                           .postString(postParamString),
-//			                           .failOnError).perform().bodyJSON
-//			let duration = Date().timeIntervalSince1970 - start.timeIntervalSince1970
-//			print("\(duration)")
-//			guard let form = json["form"] as? [String:Any],
-//				let key1 = form["key1"] as? String,
-//				let key2 = form["key2"] as? String else {
-//					return XCTAssert(false, "key1 or key2 not found in \(json)")
-//			}
-//			XCTAssertEqual(key1, "value1")
-//			XCTAssertEqual(key2, "value2")
-//			return
-//		} catch {
-//			XCTAssert(false, "\(error)")
-//		}
-//	}
-	
 	func testCURLPostData() {
 		let url = postTestURL
 		let postParamString = "key1=value1&key2=value2"
