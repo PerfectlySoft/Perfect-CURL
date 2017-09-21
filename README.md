@@ -23,7 +23,7 @@
 
 <p align="center">
     <a href="https://developer.apple.com/swift/" target="_blank">
-        <img src="https://img.shields.io/badge/Swift-3.1-orange.svg?style=flat" alt="Swift 3.1">
+        <img src="https://img.shields.io/badge/Swift-4.0-orange.svg?style=flat" alt="Swift 4.0">
     </a>
     <a href="https://developer.apple.com/swift/" target="_blank">
         <img src="https://img.shields.io/badge/Platforms-OS%20X%20%7C%20Linux%20-lightgray.svg?style=flat" alt="Platforms OS X | Linux">
@@ -43,12 +43,12 @@ This package provides support for [curl](https://curl.haxx.se) in Swift. This pa
 
 ## Building
 
-Ensure you have installed and activated the latest Swift 3.1+ tool chain.
+Ensure you have installed and activated the latest Swift 4.0+ tool chain.
 
 Add this project as a dependency in your Package.swift file.
 
 ```
-.Package(url: "https://github.com/PerfectlySoft/Perfect-CURL.git", majorVersion: 2)
+.Package(url: "https://github.com/PerfectlySoft/Perfect-CURL.git", majorVersion: 3)
 ```
 
 ### Linux Build Notes
