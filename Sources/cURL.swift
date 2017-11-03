@@ -24,7 +24,7 @@ import PerfectNet
 /// This class is a wrapper around the CURL library. It permits network operations to be completed using cURL in a block or non-blocking manner.
 public class CURL {
 
-	static var sInit:Int = {
+	static var sInit: Int = {
 		curl_global_init(Int(CURL_GLOBAL_SSL | CURL_GLOBAL_WIN32))
 		return 1
 	}()
@@ -57,6 +57,7 @@ public class CURL {
 
 	/// Initialize the CURL request.
 	public init() {
+		_ = CURL.sInit
 		self.curl = curl_easy_init()
 		setCurlOpts()
 	}
