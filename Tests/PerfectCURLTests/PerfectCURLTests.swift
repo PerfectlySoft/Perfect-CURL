@@ -365,11 +365,11 @@ class PerfectCURLTests: XCTestCase {
 			("testCURLHeader2", testCURLHeader2),
 			("testCURLPostString", testCURLPostString),
 			("testCURLPostData", testCURLPostData),
-			("testCURLPostFields", testCURLPostFields),
-			("testCURLPostFields2", testCURLPostFields2),
-			("testGithubBadResponse", testGithubBadResponse),
+			("testCURLPutData", testCURLPutData),
 			("testCURLHead", testCURLHead),
-			("testCURLPutData", testCURLPutData)
+			("testGithubBadResponse", testGithubBadResponse),
+			("testCURLPostFields", testCURLPostFields),
+			("testCURLPostFields2", testCURLPostFields2)
 		]
 	}
 }
