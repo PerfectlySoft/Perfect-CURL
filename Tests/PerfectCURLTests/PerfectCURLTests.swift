@@ -148,9 +148,7 @@ class PerfectCURLTests: XCTestCase {
 			XCTAssertNil(headers[accept.standardName])
 			XCTAssertEqual(customValue, resCustom)
 			XCTAssertEqual("", resCustom2)
-      guard let headerJSON = response.bodyJSON(HeaderJSON.self) else {
-        return XCTAssert(false, "Decodable JSON fault")
-      }
+      let headerJSON = try response.bodyJSON(HeaderJSON.self)
       print(headerJSON)
 		} catch {
 			XCTAssert(false, "\(error)")

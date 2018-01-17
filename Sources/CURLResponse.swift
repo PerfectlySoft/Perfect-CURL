@@ -302,8 +302,8 @@ public extension CURLResponse {
 	/// Invalid/non-JSON body data will result in an empty dictionary being returned.
 	public var bodyJSON: [String:Any] { do { return try bodyString.jsonDecode() as? [String:Any] ?? [:] } catch { return [:] } }
 	/// Get the response body decoded from JSON into a decodable structure
-	/// Invalid/non-JSON body data will result in nil
-	public func bodyJSON<T: Decodable>(_ type: T.Type) -> T? { do { return try JSONDecoder().decode(type, from: Data(bytes: bodyBytes)) } catch { return nil } }
+	/// Invalid/non-JSON body data will throw errors.
+	public func bodyJSON<T: Decodable>(_ type: T.Type) throws -> T { return try JSONDecoder().decode(type, from: Data(bytes: bodyBytes)) }
 }
 
 
