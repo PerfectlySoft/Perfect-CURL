@@ -219,6 +219,9 @@ public extension CURLResponse {
 	/// Get the response body decoded from JSON into a [String:Any] dictionary.
 	/// Invalid/non-JSON body data will result in an empty dictionary being returned.
 	public var bodyJSON: [String:Any]
+  /// Get the response body decoded from JSON into a decodable structure
+  /// Invalid/non-JSON body data will throw errors.
+  public func bodyJSON<T: Decodable>(_ type: T.Type) throws -> T
 }
 ```
 

@@ -21,6 +21,7 @@ import cURL
 import PerfectHTTP
 import PerfectCrypto
 import PerfectLib
+import Foundation
 
 enum ResponseReadState {
 	case status, headers, body
@@ -300,6 +301,9 @@ public extension CURLResponse {
 	/// Get the response body decoded from JSON into a [String:Any] dictionary.
 	/// Invalid/non-JSON body data will result in an empty dictionary being returned.
 	public var bodyJSON: [String:Any] { do { return try bodyString.jsonDecode() as? [String:Any] ?? [:] } catch { return [:] } }
+	/// Get the response body decoded from JSON into a decodable structure
+	/// Invalid/non-JSON body data will throw errors.
+	public func bodyJSON<T: Decodable>(_ type: T.Type) throws -> T { return try JSONDecoder().decode(type, from: Data(bytes: bodyBytes)) }
 }
 
 
