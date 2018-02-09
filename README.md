@@ -383,13 +383,5 @@ The lists which follow describe the `CURLResponse.Info` cases which are used wit
 |.redirectTime|The total time, in seconds, it took for all redirection steps include name lookup, connect, pretransfer and transfer before final transaction was started.|
 |.appConnectTime|The time, in seconds, it took from the start until the SSL/SSH connect/handshake to the remote host was completed.|
 
-## Reporting Issues
-
-We have transitioning to using JIRA for all bugs and support related issues, therefore the GitHub issues have been disabled.
-
-If you find a mistake, bug, or any other helpful suggestion you'd like to make on the docs please head over to [http://jira.perfect.org:8080/servicedesk/customer/portal/1](http://jira.perfect.org:8080/servicedesk/customer/portal/1) and raise it.
-
-A comprehensive list of open issues can be found at [http://jira.perfect.org:8080/projects/ISS/issues](http://jira.perfect.org:8080/projects/ISS/issues)
-
 ## Further Information
 For more information on the Perfect project, please visit [perfect.org](http://perfect.org).
