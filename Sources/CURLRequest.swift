@@ -22,6 +22,11 @@ import PerfectHTTP
 import PerfectNet
 import PerfectThread
 
+public protocol CURLRequestBodyGenerator {
+	var contentLength: Int? { get }
+	mutating func next(byteCount: Int) -> [UInt8]?
+}
+
 /// Creates and configures a CURL request.
 /// init with a URL and zero or more options.
 /// Call .perform to get the CURLResponse
@@ -194,13 +199,20 @@ open class CURLRequest {
 		mailFrom(String),
 		/// Specifies the recipient when performing an SMTP request. 
 		/// Multiple recipients may be specified by using this option multiple times.
-		mailRcpt(String)
+		mailRcpt(String),
+		/// CURL verbose mode.
+		verbose,
+		/// Include headers in response body.
+		header,
+		/// Indicate that the request will be an upload.
+		/// And provide an object to incrementally provide the content.
+		upload(CURLRequestBodyGenerator)
 	}
-	
 	let curl: CURL
 	/// Mutable options array for the request. These options are cleared when the request is .reset()
 	public var options: [Option]
 	var postFields: POSTFields?
+	var uploadBodyGen: CURLRequestBodyGenerator?
 	/// Init with a url and options array.
 	public convenience init(_ url: String, options: [Option] = []) {
 		self.init(options: [.url(url)] + options)
@@ -214,7 +226,6 @@ open class CURLRequest {
 		curl = CURL()
 		self.options = options
 	}
-	
 	func applyOptions() {
 		options.forEach { $0.apply(to: self) }
 		if let postFields = self.postFields {
@@ -228,7 +239,7 @@ public extension CURLRequest {
 	/// Returns the response or throws an Error.
 	func perform() throws -> CURLResponse {
 		applyOptions()
-		let resp = CURLResponse(curl, postFields: self.postFields)
+		let resp = CURLResponse(curl, postFields: postFields)
 		try resp.complete()
 		return resp
 	}
@@ -237,7 +248,7 @@ public extension CURLRequest {
 	/// The parameter passed to the completion callback must be called to obtain the response or throw an Error.
 	func perform(_ completion: @escaping (CURLResponse.Confirmation) -> ()) {
 		applyOptions()
-		CURLResponse(curl, postFields: self.postFields).complete(completion)
+		CURLResponse(curl, postFields: postFields).complete(completion)
 	}
 	
 	/// Execute the request asynchronously. 
@@ -261,6 +272,7 @@ public extension CURLRequest {
 	func reset(_ options: [Option] = []) {
 		curl.reset()
 		postFields = nil
+		uploadBodyGen = nil
 		self.options = options
 	}
 	
