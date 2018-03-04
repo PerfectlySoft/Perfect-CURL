@@ -159,6 +159,35 @@ extension CURLRequest.Option {
 			curl.setOption(CURLOPT_MAIL_FROM, s: optString)
 		case .mailRcpt(let optString):
 			curl.setOption(CURLOPT_MAIL_RCPT, s: optString)
+		case .verbose:
+			curl.setOption(CURLOPT_VERBOSE, int: 1)
+		case .header:
+			curl.setOption(CURLOPT_HEADER, int: 1)
+		case .upload(let gen):
+			curl.setOption(CURLOPT_UPLOAD, int: 1)
+			request.uploadBodyGen = gen
+			if let len = gen.contentLength {
+				curl.setOption(CURLOPT_INFILESIZE_LARGE, int: len)
+			}
+			let opaqueRequest = Unmanaged<AnyObject>.passRetained(request as AnyObject).toOpaque()
+			let curlFunc: curl_func = {
+				ptr, size, count, opaque -> Int in
+				guard let opaque = opaque else {
+					return 0
+				}
+				let this = Unmanaged<CURLRequest>.fromOpaque(opaque).takeUnretainedValue()
+				guard let bytes = this.uploadBodyGen?.next(byteCount: size*count) else {
+					return 0
+				}
+				memcpy(ptr, bytes, bytes.count)
+				return bytes.count
+			}
+			curl.setOption(CURLOPT_READDATA, v: opaqueRequest)
+			curl.setOption(CURLOPT_READFUNCTION, f: curlFunc)
 		}
 	}
 }
+
+
+
+
