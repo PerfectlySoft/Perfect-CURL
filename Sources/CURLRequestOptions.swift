@@ -179,7 +179,11 @@ extension CURLRequest.Option {
 				guard let bytes = this.uploadBodyGen?.next(byteCount: size*count) else {
 					return 0
 				}
+			#if os(Linux)
+				memcpy(ptr!, bytes, bytes.count)
+			#else
 				memcpy(ptr, bytes, bytes.count)
+			#endif
 				return bytes.count
 			}
 			curl.setOption(CURLOPT_READDATA, v: opaqueRequest)
