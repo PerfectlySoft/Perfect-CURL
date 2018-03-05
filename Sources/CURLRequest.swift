@@ -204,6 +204,8 @@ open class CURLRequest {
 		verbose,
 		/// Include headers in response body.
 		header,
+		/// This connection will be using SSL. (when is this needed? SMTP only?)
+		useSSL,
 		/// Indicate that the request will be an upload.
 		/// And provide an object to incrementally provide the content.
 		upload(CURLRequestBodyGenerator)

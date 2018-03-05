@@ -83,6 +83,8 @@ extension CURLRequest.Option {
 			headerAdd(curl, optName: optName, optValue: optValue)
 		case .removeHeader(let optName):
 			curl.setOption(CURLOPT_HTTPHEADER, s: "\(optName.standardName):")
+		case .useSSL:
+			curl.setOption(CURLOPT_USE_SSL, int: Int(CURLUSESSL_ALL.rawValue))
 		case .sslCert(let optString):
 			curl.setOption(CURLOPT_SSLCERT, s: optString)
 		case .sslCertType(let optString):
