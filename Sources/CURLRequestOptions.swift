@@ -172,18 +172,15 @@ extension CURLRequest.Option {
 			let opaqueRequest = Unmanaged<AnyObject>.passRetained(request as AnyObject).toOpaque()
 			let curlFunc: curl_func = {
 				ptr, size, count, opaque -> Int in
-				guard let opaque = opaque else {
+				guard let opaque = opaque,
+					let ptr = ptr else {
 					return 0
 				}
 				let this = Unmanaged<CURLRequest>.fromOpaque(opaque).takeUnretainedValue()
 				guard let bytes = this.uploadBodyGen?.next(byteCount: size*count) else {
 					return 0
 				}
-			#if os(Linux)
-				memcpy(ptr!, bytes, bytes.count)
-			#else
 				memcpy(ptr, bytes, bytes.count)
-			#endif
 				return bytes.count
 			}
 			curl.setOption(CURLOPT_READDATA, v: opaqueRequest)
