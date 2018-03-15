@@ -21,10 +21,24 @@ import cURL
 import PerfectHTTP
 import PerfectNet
 import PerfectThread
+import PerfectLib
 
 public protocol CURLRequestBodyGenerator {
 	var contentLength: Int? { get }
 	mutating func next(byteCount: Int) -> [UInt8]?
+}
+
+public struct FileUploader: CURLRequestBodyGenerator {
+	let file: File
+	public init(_ f: File) {
+		file = f
+	}
+	public var contentLength: Int? {
+		return file.size
+	}
+	public mutating func next(byteCount: Int) -> [UInt8]? {
+		return try? file.readSomeBytes(count: byteCount)
+	}
 }
 
 /// Creates and configures a CURL request.
@@ -208,7 +222,10 @@ open class CURLRequest {
 		useSSL,
 		/// Indicate that the request will be an upload.
 		/// And provide an object to incrementally provide the content.
-		upload(CURLRequestBodyGenerator)
+		upload(CURLRequestBodyGenerator),
+		/// Indicate that the request will be an upload.
+		/// And provide a local file path for the file to be uploaded.
+		uploadFile(String)
 	}
 	let curl: CURL
 	/// Mutable options array for the request. These options are cleared when the request is .reset()

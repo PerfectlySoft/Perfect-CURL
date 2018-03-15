@@ -18,6 +18,7 @@
 //
 
 import cURL
+import PerfectLib
 
 extension CURLRequest.Option {
 	
@@ -187,10 +188,8 @@ extension CURLRequest.Option {
 			}
 			curl.setOption(CURLOPT_READDATA, v: opaqueRequest)
 			curl.setOption(CURLOPT_READFUNCTION, f: curlFunc)
+		case .uploadFile(let path):
+			return CURLRequest.Option.upload(FileUploader(File(path))).apply(to: request)
 		}
 	}
 }
-
-
-
-

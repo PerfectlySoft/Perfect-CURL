@@ -331,6 +331,28 @@ class PerfectCURLTests: XCTestCase {
 		self.waitForExpectations(timeout: 10000)
 	}
 	
+	func testFTPUpload() {
+		let url =  "ftp://speedtest.tele2.net/upload/testupload.txt"
+		let filePath = "/tmp/testupload.txt"
+		do {
+			let makeFile = File(filePath)
+			try makeFile.open(.truncate)
+			defer {
+				makeFile.delete()
+			}
+			for _ in 0..<2048 {
+				try makeFile.write(string: "A")
+			}
+			makeFile.close()
+			
+			let req = CURLRequest(url, .uploadFile(filePath))
+			let resp = try req.perform()
+			XCTAssertEqual(226, resp.responseCode)
+		} catch {
+			XCTFail("\(error)")
+		}
+	}
+	
 	static var allTests : [(String, (PerfectCURLTests) -> () throws -> Void)] {
 		return [
 			("testCURLError", testCURLError),
@@ -349,4 +371,3 @@ class PerfectCURLTests: XCTestCase {
 		]
 	}
 }
-
