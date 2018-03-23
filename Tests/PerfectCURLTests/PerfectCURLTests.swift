@@ -74,7 +74,7 @@ class PerfectCURLTests: XCTestCase {
 			XCTAssert(false, "\(error)")
 		}
 	}
-
+	
 	func testCURLAsync() {
 		let clientExpectation = self.expectation(description: "client")
 		let url = headersTestURL
@@ -99,7 +99,7 @@ class PerfectCURLTests: XCTestCase {
 		
 		do {
 			let responseCode = try CURLRequest(url, .failOnError).promise().then {
-					return try $0().responseCode
+				return try $0().responseCode
 				}.wait()
 			XCTAssertNotNil(responseCode)
 			XCTAssertEqual(responseCode ?? 0, 200)
@@ -107,7 +107,7 @@ class PerfectCURLTests: XCTestCase {
 			XCTAssert(false, "\(error)")
 		}
 	}
-
+	
 	func testCURLHeader() {
 		let url = headersTestURL
 		let accept = CURLRequest.Header.Name.accept
@@ -117,39 +117,39 @@ class PerfectCURLTests: XCTestCase {
 		let customValue = "value123"
 		
 		let request = CURLRequest(url, .failOnError,
-		                          .addHeader(custom, customValueFalse),
-		                          .addHeader(custom2, ""),
-		                          .removeHeader(accept),
-		                          .replaceHeader(custom, customValue))
-
-    struct Headers: Codable {
-      var connection = ""
-      var host = ""
-      var extra = ""
-      var extra2 = ""
-      private enum CodingKeys: String, CodingKey {
-        case connection = "Connection"
-        case host = "Host"
-        case extra = "X-Extra"
-        case extra2 = "X-Extra-2"
-      }
-    }
-    struct HeaderJSON: Codable {
-      var headers = Headers()
-    }
+								  .addHeader(custom, customValueFalse),
+								  .addHeader(custom2, ""),
+								  .removeHeader(accept),
+								  .replaceHeader(custom, customValue))
+		
+		struct Headers: Codable {
+			var connection = ""
+			var host = ""
+			var extra = ""
+			var extra2 = ""
+			private enum CodingKeys: String, CodingKey {
+				case connection = "Connection"
+				case host = "Host"
+				case extra = "X-Extra"
+				case extra2 = "X-Extra-2"
+			}
+		}
+		struct HeaderJSON: Codable {
+			var headers = Headers()
+		}
 		do {
 			let response = try request.perform()
 			let json = response.bodyJSON
 			guard let headers = json["headers"] as? [String:Any],
-					let resCustom = headers[custom.standardName] as? String,
-					let resCustom2 = headers[custom2.standardName] as? String else {
-				return XCTAssert(false, "\(custom.standardName) not found in \(json)")
+				let resCustom = headers[custom.standardName] as? String,
+				let resCustom2 = headers[custom2.standardName] as? String else {
+					return XCTAssert(false, "\(custom.standardName) not found in \(json)")
 			}
 			XCTAssertNil(headers[accept.standardName])
 			XCTAssertEqual(customValue, resCustom)
 			XCTAssertEqual("", resCustom2)
-      let headerJSON = try response.bodyJSON(HeaderJSON.self)
-      print(headerJSON)
+			let headerJSON = try response.bodyJSON(HeaderJSON.self)
+			print(headerJSON)
 		} catch {
 			XCTAssert(false, "\(error)")
 		}
@@ -281,10 +281,10 @@ class PerfectCURLTests: XCTestCase {
 			try testFile.write(string: testFileContents)
 			testFile.close()
 			let json = try CURLRequest(url, .failOnError,
-			                           .postField(.init(name: "key1", value: "value 1")),
-			                           .postField(.init(name: "key2", value: "value 2")),
-			                           .postField(.init(name: "file1", filePath: testFile.path, mimeType: "text/plain")))
-											.perform().bodyJSON
+									   .postField(.init(name: "key1", value: "value 1")),
+									   .postField(.init(name: "key2", value: "value 2")),
+									   .postField(.init(name: "file1", filePath: testFile.path, mimeType: "text/plain")))
+				.perform().bodyJSON
 			guard let form = json["form"] as? [String:Any],
 				let key1 = form["key1"] as? String,
 				let key2 = form["key2"] as? String else {
