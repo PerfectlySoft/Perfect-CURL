@@ -140,7 +140,7 @@ open class CURLResponse {
 	}
 	
 	let curl: CURL
-	var headers = Array<(Header.Name, String)>()
+	public internal(set) var headers = Array<(Header.Name, String)>()
 	
 	/// The response's raw content body bytes.
 	public internal(set) var bodyBytes = [UInt8]()
