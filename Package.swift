@@ -7,10 +7,11 @@ let package = Package(
 	products: [.library(name: "PerfectCURL", targets: ["PerfectCURL"])],
 	dependencies: [
 		.package(url: "https://github.com/PerfectlySoft/Perfect-libcurl.git", from: "2.0.0"),
-		.package(url: "https://github.com/PerfectlySoft/Perfect-HTTP.git", from: "3.0.0"),
+		.package(url: "https://github.com/PerfectlySoft/PerfectLib.git", from: "3.0.0"),
+		.package(url: "https://github.com/PerfectlySoft/Perfect-Thread.git", from: "3.0.0"),
 	],
 	targets: [
-		.target(name: "PerfectCURL", dependencies: ["PerfectHTTP"]),
-		.testTarget(name: "PerfectCURLTests", dependencies: ["PerfectHTTP", "PerfectCURL"])
+		.target(name: "PerfectCURL", dependencies: ["PerfectLib", "PerfectThread"]),
+		.testTarget(name: "PerfectCURLTests", dependencies: ["PerfectCURL"])
 	]
 )

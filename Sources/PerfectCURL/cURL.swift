@@ -18,8 +18,7 @@
 //
 
 import cURL
-import PerfectThread
-import PerfectNet
+import Dispatch
 
 /// This class is a wrapper around the CURL library. It permits network operations to be completed using cURL in a block or non-blocking manner.
 public class CURL {
@@ -35,7 +34,6 @@ public class CURL {
 	typealias SList = UnsafeMutablePointer<curl_slist>
 	
 	var slistMap = [UInt32:SList]()
-//	var slists = UnsafeMutablePointer<curl_slist>(nil as OpaquePointer?)
 
 	var headerBytes = [UInt8]()
 	var bodyBytes = [UInt8]()
@@ -221,12 +219,6 @@ public class CURL {
 		if timeout == 0 {
 			return closure()
 		}
-		let timeoutSeconds: Double
-		if timeout == -1 {
-			timeoutSeconds = 0.1
-		} else {
-			timeoutSeconds = Double(timeout) / 1000
-		}
 		
 		var fdsRd = fd_set(), fdsWr = fd_set(), fdsEx = fd_set()
 		var fdsZero = fd_set()
@@ -236,24 +228,22 @@ public class CURL {
 		memset(&fdsEx, 0, MemoryLayout<fd_set>.size)
 		var max = Int32(0)
 		curl_multi_fdset(self.multi, &fdsRd, &fdsWr, &fdsEx, &max)
+		
+		var tv = timeval()
+		tv.tv_sec = timeout/1000
+	#if os(Linux)
+		tv.tv_usec = Int((timeout%1000)*1000)
+	#else
+		tv.tv_usec = Int32((timeout%1000)*1000)
+	#endif
 		if max == -1 {
-			Threading.dispatch {
-				closure()
-			}
-		} else if 0 != memcmp(&fdsZero, &fdsRd, MemoryLayout<fd_set>.size) {
-			// wait for read
-			NetEvent.add(socket: max, what: .read, timeoutSeconds: timeoutSeconds) {
-				_, w in
-				closure()
-			}
-		} else if 0 != memcmp(&fdsZero, &fdsWr, MemoryLayout<fd_set>.size) {
-			// wait for write
-			NetEvent.add(socket: max, what: .write, timeoutSeconds: timeoutSeconds) {
-				_, w in
+			DispatchQueue.global().async {
 				closure()
 			}
 		} else {
-			Threading.dispatch {
+			// wait for write
+			DispatchQueue.global().async {
+				select(max+1, &fdsRd, &fdsWr, &fdsEx, &tv)
 				closure()
 			}
 		}

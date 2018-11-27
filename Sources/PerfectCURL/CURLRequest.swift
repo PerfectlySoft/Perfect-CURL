@@ -18,10 +18,14 @@
 //
 
 import cURL
-import PerfectHTTP
-import PerfectNet
 import PerfectThread
 import PerfectLib
+
+public enum TLSMethod {
+	case tlsV1
+	case tlsV1_1
+	case tlsV1_2
+}
 
 public protocol CURLRequestBodyGenerator {
 	var contentLength: Int? { get }
@@ -70,8 +74,6 @@ open class CURLRequest {
 			self.mimeType = mimeType
 		}
 	}
-	/// The HTTP method to set explicitly.
-	public typealias HTTPMethod = PerfectHTTP.HTTPMethod
 	/// Kerberos security level for FTP requests. Used with `.kbrLevel` option.
 	public enum KBRLevel {
 		case clear, safe, confidential, `private`

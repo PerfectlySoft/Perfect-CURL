@@ -18,9 +18,6 @@
 //
 
 import cURL
-import PerfectHTTP
-import PerfectCrypto
-import PerfectLib
 import Foundation
 
 enum ResponseReadState {
@@ -244,8 +241,8 @@ extension CURLResponse {
 				pos += 1
 			}
 			let valuePtr = UnsafeBufferPointer(start: valueStart, count: max-pos)
-			let name = UTF8Encoding.encode(generator: namePtr.makeIterator())
-			let value = UTF8Encoding.encode(generator: valuePtr.makeIterator())
+			let name = String(bytes: namePtr, encoding: .utf8) ?? ""
+			let value = String(bytes: valuePtr, encoding: .utf8) ?? ""
 			headers.append((Header.Name.fromStandard(name: name), value))
 		}
 	}
@@ -297,7 +294,7 @@ public extension CURLResponse {
 	/// Get the HTTP response code
 	public var responseCode: Int { return get(.responseCode) ?? 0 }
 	/// Get the response body converted from UTF-8.
-	public var bodyString: String { return UTF8Encoding.encode(bytes: self.bodyBytes) }
+	public var bodyString: String { return String(bytes: bodyBytes, encoding: .utf8) ?? "" }
 	/// Get the response body decoded from JSON into a [String:Any] dictionary.
 	/// Invalid/non-JSON body data will result in an empty dictionary being returned.
 	public var bodyJSON: [String:Any] { do { return try bodyString.jsonDecode() as? [String:Any] ?? [:] } catch { return [:] } }
