@@ -190,6 +190,8 @@ extension CURLRequest.Option {
 			curl.setOption(CURLOPT_READFUNCTION, f: curlFunc)
 		case .uploadFile(let path):
 			return CURLRequest.Option.upload(FileUploader(File(path))).apply(to: request)
+		case .acceptEncoding(let str):
+			curl.setOption(CURLOPT_ACCEPT_ENCODING, s: str)
 		}
 	}
 }
