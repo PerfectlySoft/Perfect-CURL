@@ -161,6 +161,8 @@ open class CURLRequest {
 		replaceHeader(Header.Name, String),
 		/// Remove a default internally added header.
 		removeHeader(Header.Name),
+		/// Set the Accept-Encoding header and enable decompression of response data.
+		acceptEncoding(String),
 		/// Path to the client SSL certificate.
 		sslCert(String),
 		/// Specifies the type for the client SSL certificate. Defaults to `.pem`.
