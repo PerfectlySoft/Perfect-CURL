@@ -60,8 +60,8 @@ public enum HTTPMethod: Hashable, CustomStringConvertible {
 	}
 	
 	/// Method String hash value
-	public var hashValue: Int {
-		return self.description.hashValue
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(description.hashValue)
 	}
 	
 	/// The method as a String
