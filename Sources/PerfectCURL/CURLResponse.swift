@@ -200,7 +200,9 @@ extension CURLResponse {
 		}
 		if notDone {
 			curl.ioWait {
-				self.innerComplete(callback)
+ 				Threading.dispatch {
+					self.innerComplete(callback)
+				}
 			}
 		} else {
 			postFields = nil
