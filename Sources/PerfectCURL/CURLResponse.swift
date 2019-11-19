@@ -19,6 +19,7 @@
 
 import cURL
 import Foundation
+import PerfectThread
 
 enum ResponseReadState {
 	case status, headers, body
