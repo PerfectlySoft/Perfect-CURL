@@ -19,6 +19,7 @@
 
 import cURL
 import Foundation
+import PerfectThread
 
 enum ResponseReadState {
 	case status, headers, body
@@ -200,7 +201,9 @@ extension CURLResponse {
 		}
 		if notDone {
 			curl.ioWait {
-				self.innerComplete(callback)
+ 				Threading.dispatch {
+					self.innerComplete(callback)
+				}
 			}
 		} else {
 			postFields = nil
